@@ -1,0 +1,165 @@
+/* ────────────────────────────────────────────────
+   LUMINA — Weekly Wrapped Overlay Styles
+   The vortex canvas sits at z-index 0.
+   All slide content is z-index 10+.
+   ──────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+
+.wrapped-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 999999;
+  background: #000010;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Inter', 'Outfit', sans-serif;
+  overflow: hidden;
+}
+
+/* ── Close Button ── */
+.wrapped-close-btn {
+  position: absolute;
+  top: 1.75rem;
+  right: 1.75rem;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+  z-index: 9999999;
+  opacity: 0.7;
+  transition: opacity 0.2s, background 0.2s;
+  backdrop-filter: blur(8px);
+}
+.wrapped-close-btn:hover { opacity: 1; background: rgba(255,255,255,0.16); }
+
+/* ── Progress Bars ── */
+.wrapped-progress-container {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  right: 1rem;
+  display: flex;
+  gap: 4px;
+  z-index: 9999999;
+}
+
+.wrapped-progress-bar {
+  flex: 1;
+  height: 3px;
+  background: rgba(255,255,255,0.18);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.wrapped-progress-fill {
+  height: 100%;
+  background: rgba(255,255,255,0.9);
+  width: 0%;
+}
+
+/* ── Slides ── */
+.wrapped-slide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 2rem;
+  /* transparent — vortex canvas behind shows all color */
+  background: transparent;
+  opacity: 0;
+  transform: translateY(24px) scale(0.99);
+  transition: opacity 0.55s ease-in-out, transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.wrapped-slide.active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* ── Typography ── */
+.wrapped-title {
+  font-size: 4.5rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+  letter-spacing: -3px;
+  line-height: 1;
+  color: #fff;
+}
+
+.wrapped-subtitle {
+  font-size: 1.3rem;
+  font-weight: 500;
+  opacity: 0.65;
+  letter-spacing: 0.15em;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.wrapped-huge-word {
+  font-size: 8rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -4px;
+  line-height: 0.9;
+  color: #fff;
+}
+
+/* ── Film grain for missing-day slides ── */
+.film-grain {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.18;
+  pointer-events: none;
+  animation: grain-anim 0.18s steps(2) infinite;
+  z-index: 1;
+}
+
+@keyframes grain-anim {
+  0%   { transform: translate(0,0) scale(1.02); }
+  20%  { transform: translate(-4%,-3%) scale(1.02); }
+  40%  { transform: translate(3%, 5%) scale(1.02); }
+  60%  { transform: translate(-3%,-2%) scale(1.02); }
+  80%  { transform: translate( 4%, 3%) scale(1.02); }
+  100% { transform: translate(0,0) scale(1.02); }
+}
+
+/* ── Share button ── */
+.share-btn {
+  padding: 0.85rem 2rem;
+  font-size: 1rem;
+  font-weight: 700;
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 50px;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  letter-spacing: 0.05em;
+  transition: background 0.2s, transform 0.15s;
+}
+.share-btn:hover {
+  background: rgba(255,255,255,0.2);
+  transform: scale(1.04);
+}

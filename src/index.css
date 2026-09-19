@@ -1,0 +1,196 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=Quicksand:wght@400;500;600;700&family=Lora:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=JetBrains+Mono:wght@300;400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 96%;
+    --card: 0 0% 4%;
+    --card-foreground: 0 0% 96%;
+    --popover: 0 0% 4%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 96%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 0% 75%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 96%;
+    --border: 0 0% 12%;
+    --input: 0 0% 8%;
+    --ring: 0 0% 100%;
+    --radius: 1rem;
+
+    /* Lumina custom tokens */
+    --midnight: 0 0% 0%;
+    --indigo: 0 0% 100%;
+    --aurora: 0 0% 75%;
+    --cyan: 0 0% 55%;
+    --pink: 0 0% 85%;
+    --warm-white: 0 0% 96%;
+    --slate-text: 0 0% 65%;
+
+    /* Glass */
+    --glass-bg: rgba(255, 255, 255, 0.03);
+    --glass-border: rgba(255, 255, 255, 0.06);
+    --glass-hover: rgba(255, 255, 255, 0.08);
+
+    /* Shadows */
+    --shadow-glass: 0 0 0 1px rgba(255,255,255,0.06), 0 8px 32px -4px rgba(0,0,0,0.5);
+    --shadow-glow-indigo: 0 0 40px rgba(255, 255, 255, 0.12);
+
+    /* Mood theme vars (defaults = neutral/calm) */
+    --mood-bg: #000000;
+    --mood-bg-secondary: #0a0a0a;
+    --mood-accent: #ffffff;
+    --mood-accent-soft: rgba(255,255,255,0.1);
+    --mood-card-bg: rgba(255,255,255,0.03);
+    --mood-card-border: rgba(255,255,255,0.06);
+    --mood-text: #ffffff;
+    --mood-text-muted: #d4d4d8;
+    --mood-font: 'Outfit', sans-serif;
+
+    --sidebar-background: 0 0% 4%;
+    --sidebar-foreground: 0 0% 96%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 0 0% 10%;
+    --sidebar-accent-foreground: 0 0% 96%;
+    --sidebar-border: 0 0% 12%;
+    --sidebar-ring: 0 0% 100%;
+  }
+}
+
+/* ===== MOOD THEME OVERRIDES ===== */
+/* Text readability is forced via extreme white/bright colors and heavy drop shadows, paired with deeply blurred, tinted cards. */
+
+/* HAPPY — Bright Sunny Fields */
+.mood-happy {
+  --mood-bg: #1a1000;
+  --mood-bg-secondary: #1f1500;
+  --mood-accent: #F59E0B;
+  --mood-accent-soft: rgba(245,158,11,0.25);
+  --mood-card-bg: rgba(20, 10, 0, 0.55);
+  --mood-card-border: rgba(245,158,11,0.4);
+  --mood-text: #ffffff;
+  --mood-text-muted: #fde68a;
+  --mood-font: 'Quicksand', sans-serif;
+}
+.mood-happy body, .mood-happy .mood-page { font-family: 'Quicksand', sans-serif; color: var(--mood-text); }
+.mood-happy .font-display { font-family: 'Quicksand', sans-serif !important; }
+
+/* SAD (Anti-Sad) — Warm Sunrise */
+.mood-sad {
+  --mood-bg: #1a0a00;
+  --mood-bg-secondary: #1f0e00;
+  --mood-accent: #FB923C;
+  --mood-accent-soft: rgba(251,146,60,0.25);
+  --mood-card-bg: rgba(10, 5, 0, 0.55);
+  --mood-card-border: rgba(251,146,60,0.4);
+  --mood-text: #ffffff;
+  --mood-text-muted: #fed7aa;
+  --mood-font: 'Lora', serif;
+}
+.mood-sad body, .mood-sad .mood-page { font-family: 'Lora', serif; color: var(--mood-text); }
+.mood-sad .font-display { font-family: 'Lora', serif !important; }
+
+/* ANGRY (Anti-Angry) — Peaceful Lavender */
+.mood-angry {
+  --mood-bg: #0d0012;
+  --mood-bg-secondary: #110018;
+  --mood-accent: #A78BFA;
+  --mood-accent-soft: rgba(167,139,250,0.25);
+  --mood-card-bg: rgba(5, 0, 15, 0.55);
+  --mood-card-border: rgba(167,139,250,0.4);
+  --mood-text: #ffffff;
+  --mood-text-muted: #e9d5ff;
+  --mood-font: 'Playfair Display', serif;
+}
+.mood-angry body, .mood-angry .mood-page { font-family: 'Playfair Display', serif; color: var(--mood-text); }
+.mood-angry .font-display { font-family: 'Playfair Display', serif !important; }
+
+/* STRESSED (Anti-Stressed) — Nature Green */
+.mood-stressed {
+  --mood-bg: #001a0a;
+  --mood-bg-secondary: #001f0e;
+  --mood-accent: #34D399;
+  --mood-accent-soft: rgba(52,211,153,0.25);
+  --mood-card-bg: rgba(0, 15, 5, 0.55);
+  --mood-card-border: rgba(52,211,153,0.4);
+  --mood-text: #ffffff;
+  --mood-text-muted: #a7f3d0;
+  --mood-font: 'Nunito', sans-serif;
+}
+.mood-stressed body, .mood-stressed .mood-page { font-family: 'Nunito', sans-serif; color: var(--mood-text); }
+.mood-stressed .font-display { font-family: 'Nunito', sans-serif !important; }
+
+/* Global Text Protections for Mood Pages */
+.mood-page h1, .mood-page h2, .mood-page h3, .mood-page h4, .mood-page h5 {
+  text-shadow: 0 2px 10px rgba(0,0,0,0.8), 0 4px 20px rgba(0,0,0,0.5); /* Heavy drop shadow on all headings */
+  color: #ffffff !important;
+}
+
+.mood-page p, .mood-page span {
+  text-shadow: 0 1px 4px rgba(0,0,0,0.6); /* Subtle shadow on text */
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    background: var(--mood-card-bg, rgba(255,255,255,0.03));
+    border: 1px solid var(--mood-card-border, rgba(255,255,255,0.06));
+    backdrop-filter: blur(28px) saturate(120%); /* extremely strong blur */
+    -webkit-backdrop-filter: blur(28px) saturate(120%);
+    box-shadow: var(--shadow-glass), 0 8px 32px rgba(0,0,0,0.4);
+    transition: background 0.8s ease, border-color 0.8s ease;
+  }
+  .glass-card:hover {
+    background: var(--mood-accent-soft, rgba(255,255,255,0.08));
+  }
+
+  /* Reset text shadows inside cards where contrast is already guaranteed by the dark background */
+  .glass-card h1, .glass-card h2, .glass-card h3, .glass-card p, .glass-card span {
+    text-shadow: none;
+  }
+
+  .glow-indigo {
+    box-shadow: var(--shadow-glow-indigo);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+  }
+
+  .noise-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1;
+  }
+}

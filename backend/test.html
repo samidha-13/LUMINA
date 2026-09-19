@@ -1,0 +1,1792 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>LUMINA</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=JetBrains+Mono:wght@300;400&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #03020f;
+      font-family: 'JetBrains Mono', monospace;
+      color: #fff;
+    }
+
+    /* LOADING */
+    #loading {
+      position: fixed;
+      inset: 0;
+      z-index: 900;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #03020f;
+      gap: 18px;
+      transition: opacity 1.2s ease;
+    }
+
+    #loading.gone {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .ll {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 32px;
+      font-weight: 300;
+      letter-spacing: .55em;
+      color: rgba(255, 255, 255, .44);
+    }
+
+    .ls {
+      font-size: 8px;
+      letter-spacing: .3em;
+      color: rgba(255, 255, 255, .18);
+    }
+
+    .bw {
+      width: 160px;
+      height: 1px;
+      background: rgba(255, 255, 255, .07);
+    }
+
+    .bf {
+      height: 100%;
+      background: #7860f0;
+      width: 0%;
+      transition: width .4s;
+    }
+
+    #ptxt {
+      font-size: 8px;
+      letter-spacing: .22em;
+      color: rgba(255, 255, 255, .2);
+    }
+
+    /* LEFT — 3D avatar + mesh overlay — FULL VIEWPORT in embedded mode */
+    #scene-wrap {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      overflow: hidden;
+      background: radial-gradient(ellipse at 50% 38%, #120830 0%, #03020f 72%);
+    }
+
+    #avatar {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    /* mesh canvas sits ON TOP of the 3D avatar */
+    #mesh-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+      opacity: 0.45;
+    }
+
+    /* Badge — hidden in embedded mode */
+    #badge {
+      display: none !important;
+
+      #bem {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 22px;
+        font-weight: 300;
+        letter-spacing: .25em;
+        color: rgba(255, 255, 255, .65);
+        transition: color .9s;
+        text-shadow: 0 2px 14px rgba(0, 0, 0, .9);
+      }
+
+      #bsub {
+        font-size: 7px;
+        letter-spacing: .2em;
+        color: rgba(255, 255, 255, .22);
+        margin-top: 3px;
+        text-shadow: 0 1px 8px rgba(0, 0, 0, .9);
+        transition: color .7s;
+      }
+
+      /* Speaking bars — hidden in embedded mode (lipsync still works) */
+      #sbars {
+        display: none !important;
+      }
+
+      /* Hide entire right panel (conversation, chat, input) */
+      #right-panel {
+        display: none !important;
+      }
+
+      .sb {
+        width: 3px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, .35);
+        animation: sb .72s ease-in-out infinite;
+      }
+
+      .sb:nth-child(1) {
+        animation-delay: 0s
+      }
+
+      .sb:nth-child(2) {
+        animation-delay: .11s
+      }
+
+      .sb:nth-child(3) {
+        animation-delay: .22s
+      }
+
+      .sb:nth-child(4) {
+        animation-delay: .17s
+      }
+
+      .sb:nth-child(5) {
+        animation-delay: .06s
+      }
+
+      @keyframes sb {
+
+        0%,
+        100% {
+          height: 3px;
+          opacity: .18
+        }
+
+        50% {
+          height: 16px;
+          opacity: .72
+        }
+      }
+
+      /* RIGHT PANEL */
+      #right-panel {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 45vw;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        border-left: 1px solid rgba(255, 255, 255, .04);
+        background: rgba(3, 2, 15, .88);
+        backdrop-filter: blur(18px);
+        z-index: 30;
+      }
+
+      #rhead {
+        padding: 22px 22px 14px;
+        border-bottom: 1px solid rgba(255, 255, 255, .05);
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      #rhead-title {
+        font-size: 8px;
+        letter-spacing: .22em;
+        color: rgba(255, 255, 255, .22);
+      }
+
+      #stlbl {
+        font-size: 7px;
+        letter-spacing: .13em;
+        color: rgba(255, 255, 255, .18);
+        margin-top: 2px;
+      }
+
+      .pill {
+        font-size: 7px;
+        letter-spacing: .14em;
+        color: #7860f0;
+        border: 1px solid rgba(120, 96, 240, .3);
+        padding: 3px 9px;
+        border-radius: 999px;
+      }
+
+      /* Emotion panel */
+      #emo-panel {
+        padding: 14px 22px 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, .04);
+        flex-shrink: 0;
+      }
+
+      #emo-name {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 17px;
+        font-weight: 300;
+        color: rgba(255, 255, 255, .65);
+        transition: color .8s;
+        margin-bottom: 4px;
+      }
+
+      #emo-desc {
+        font-size: 8px;
+        color: rgba(255, 255, 255, .26);
+        line-height: 1.65;
+        margin-bottom: 8px;
+      }
+
+      .ebar {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 5px;
+      }
+
+      .ebn {
+        font-size: 7px;
+        color: rgba(255, 255, 255, .22);
+        width: 58px;
+      }
+
+      .ebt {
+        flex: 1;
+        height: 2px;
+        background: rgba(255, 255, 255, .06);
+        border-radius: 1px;
+        overflow: hidden;
+      }
+
+      .ebf {
+        height: 100%;
+        border-radius: 1px;
+        transition: width .6s ease, background .6s ease;
+      }
+
+      /* Chat */
+      #chatlog {
+        flex: 1;
+        overflow-y: auto;
+        padding: 14px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, .07) transparent;
+      }
+
+      #chatlog::-webkit-scrollbar {
+        width: 3px;
+      }
+
+      #chatlog::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, .10);
+        border-radius: 2px;
+      }
+
+      .cmsg {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        animation: mIn .3s ease;
+      }
+
+      @keyframes mIn {
+        from {
+          opacity: 0;
+          transform: translateY(6px)
+        }
+
+        to {
+          opacity: 1;
+          transform: translateY(0)
+        }
+      }
+
+      .cmsg-who {
+        font-size: 8px;
+        color: rgba(255, 255, 255, .26);
+        letter-spacing: .08em;
+      }
+
+      .cmsg-text {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 14px;
+        font-style: italic;
+        color: rgba(255, 255, 255, .75);
+        line-height: 1.72;
+        background: rgba(255, 255, 255, .03);
+        border: 1px solid rgba(255, 255, 255, .06);
+        border-radius: 10px;
+        padding: 10px 13px;
+      }
+
+      .cmsg-text.user {
+        border-left: 2px solid rgba(120, 96, 240, .4);
+        font-style: normal;
+        font-size: 12px;
+      }
+
+      /* Input */
+      #ibar {
+        flex-shrink: 0;
+        padding: 12px 18px 18px;
+        border-top: 1px solid rgba(255, 255, 255, .06);
+        background: rgba(3, 2, 15, .96);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      #micbtn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        border: 1px solid rgba(255, 255, 255, .08);
+        background: rgba(255, 255, 255, .04);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all .2s;
+        position: relative;
+      }
+
+      #micbtn:hover {
+        background: rgba(255, 255, 255, .08);
+      }
+
+      #micbtn.on {
+        background: rgba(192, 57, 43, .14);
+        border-color: rgba(192, 57, 43, .36);
+      }
+
+      #micbtn.on::after {
+        content: '';
+        position: absolute;
+        inset: -4px;
+        border-radius: 50%;
+        border: 1px solid rgba(192, 57, 43, .2);
+        animation: ping 1.1s ease-out infinite;
+      }
+
+      @keyframes ping {
+        0% {
+          transform: scale(1);
+          opacity: .55
+        }
+
+        100% {
+          transform: scale(1.5);
+          opacity: 0
+        }
+      }
+
+      #micbtn svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      #micbtn.on svg path,
+      #micbtn.on svg line {
+        stroke: rgba(220, 70, 50, .9) !important;
+        fill: rgba(220, 70, 50, .9) !important;
+      }
+
+      #inp {
+        flex: 1;
+        background: rgba(255, 255, 255, .04);
+        border: 1px solid rgba(255, 255, 255, .07);
+        border-radius: 9px;
+        padding: 10px 13px;
+        color: rgba(255, 255, 255, .7);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        outline: none;
+        transition: border-color .2s;
+      }
+
+      #inp:focus {
+        border-color: rgba(120, 96, 240, .35);
+      }
+
+      #inp::placeholder {
+        color: rgba(255, 255, 255, .15);
+      }
+
+      #inp:disabled {
+        opacity: .3;
+      }
+
+      #sndbtn {
+        padding: 9px 14px;
+        border-radius: 9px;
+        border: 1px solid rgba(120, 96, 240, .28);
+        background: rgba(120, 96, 240, .08);
+        color: rgba(255, 255, 255, .5);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 8px;
+        letter-spacing: .16em;
+        cursor: pointer;
+        transition: all .2s;
+        white-space: nowrap;
+      }
+
+      #sndbtn:hover:not(:disabled) {
+        background: rgba(120, 96, 240, .2);
+        color: rgba(255, 255, 255, .9);
+      }
+
+      #sndbtn:disabled {
+        opacity: .2;
+        cursor: not-allowed;
+      }
+  </style>
+  <script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+    "talkinghead": "https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@1.7/modules/talkinghead.mjs"
+  }
+}
+</script>
+</head>
+
+<body>
+
+  <div id="loading">
+    <div class="ll">LUMINA</div>
+    <div class="ls">emotional intelligence</div>
+    <div class="bw">
+      <div class="bf" id="prog"></div>
+    </div>
+    <div id="ptxt" class="ls">initialising</div>
+  </div>
+
+  <div id="scene-wrap">
+    <div id="avatar"></div>
+    <canvas id="mesh-canvas"></canvas>
+  </div>
+
+  <div id="badge">
+    <div id="bem">Neutral</div>
+    <div id="bsub">ready</div>
+  </div>
+  <div id="sbars">
+    <div class="sb"></div>
+    <div class="sb"></div>
+    <div class="sb"></div>
+    <div class="sb"></div>
+    <div class="sb"></div>
+  </div>
+
+  <div id="right-panel">
+    <div id="rhead">
+      <div>
+        <div id="rhead-title">CONVERSATION</div>
+        <div id="stlbl">loading…</div>
+      </div>
+      <div class="pill">ELEVENLABS</div>
+    </div>
+    <div id="emo-panel">
+      <div id="emo-name">Neutral</div>
+      <div id="emo-desc">Resting — ready to listen.</div>
+      <div class="ebar">
+        <div class="ebn">Valence</div>
+        <div class="ebt">
+          <div class="ebf" id="ebv" style="width:50%"></div>
+        </div>
+      </div>
+      <div class="ebar">
+        <div class="ebn">Arousal</div>
+        <div class="ebt">
+          <div class="ebf" id="eba" style="width:20%"></div>
+        </div>
+      </div>
+      <div class="ebar">
+        <div class="ebn">Intensity</div>
+        <div class="ebt">
+          <div class="ebf" id="ebi" style="width:15%"></div>
+        </div>
+      </div>
+    </div>
+    <div id="chatlog"></div>
+    <div id="ibar">
+      <button id="micbtn" onclick="toggleMic()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.42)" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z" fill="rgba(255,255,255,.22)" />
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+          <line x1="12" y1="19" x2="12" y2="23" />
+          <line x1="8" y1="23" x2="16" y2="23" />
+        </svg>
+      </button>
+      <input id="inp" type="text" placeholder="share how you feel…" maxlength="300" />
+      <button id="sndbtn" onclick="doSend()">SEND</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { TalkingHead } from "talkinghead";
+
+    // ── DEBUG: intercept all speech in iframe ──
+    const _origSpeak = window.speechSynthesis.speak.bind(window.speechSynthesis);
+    window.speechSynthesis.speak = (u) => {
+      console.log('🔊 IFRAME SPEECH:', {
+        text: u.text?.slice(0, 80),
+        voice: u.voice?.name || 'DEFAULT = MALE',
+        pitch: u.pitch,
+        rate: u.rate,
+        stack: new Error().stack?.split('\n').slice(1, 4).join(' | ')
+      });
+      _origSpeak(u);
+    };
+    console.log('test.html loaded');
+    window.addEventListener('load', () => { console.log('🔍 test.html window load fired'); });
+
+    // ══════════════════════════════════════════════
+    //  HARDCODED KEYS
+    // ══════════════════════════════════════════════
+    const GK = '';
+    const EK = '';
+    const EV = 'Lw21wLjWqPPaL3TcYWek'; // Indian female voice
+
+    // ══════════════════════════════════════════════
+    //  GROQ SYSTEM PROMPT
+    // ══════════════════════════════════════════════
+    const SYS = `You are LUMINA — a warm, deeply empathetic emotional AI companion.
+Reply ONLY with this exact JSON, nothing else:
+{"emotion":"<emotion_key>","response":"<2-3 sentences>","valence":<0-100>,"arousal":<0-100>,"intensity":<0-100>}
+
+EMOTION KEYS: neutral | joy | trust | empathy | calm | concern | love | comfort | surprise | anticipation
+
+RULES:
+- User HAPPY/EXCITED → joy (celebrate with them, bright energy)
+- User SAD/HURTING → empathy (soft, "I feel that with you, I'm here")
+- User ANGRY/STRESSED → calm (acknowledge once, ground them gently)
+- User FEARFUL/ANXIOUS → comfort (slow, "you are safe with me")
+- User WORRYING → concern (caring, attentive)
+- User LOVING/VULNERABLE → love (tender, warm)
+- User SURPRISED → surprise
+- User wants GUIDANCE → trust (steady, reassuring)
+- User EXCITED for future → anticipation
+- General chat → neutral or trust
+
+Always be the calming, uplifting presence. 2-3 sentences max. End with warmth or a gentle question. Only the JSON.`;
+
+    // ══════════════════════════════════════════════
+    //  EMOTION DEFINITIONS
+    // ══════════════════════════════════════════════
+    const EMO = {
+      neutral: { hex: '#9488cc', thMood: 'neutral', desc: 'Resting — ready to listen.', dv: { v: 50, a: 18, i: 10 } },
+      joy: { hex: '#e8b828', thMood: 'happy', desc: 'Radiant joy — bright and alive.', dv: { v: 65, a: 48, i: 55 } },
+      trust: { hex: '#36a876', thMood: 'happy', desc: 'Safe, connected, open.', dv: { v: 62, a: 28, i: 38 } },
+      empathy: { hex: '#7aa8e8', thMood: 'sad', desc: 'Deeply present with your pain.', dv: { v: 35, a: 28, i: 45 } },
+      calm: { hex: '#82c8a0', thMood: 'neutral', desc: 'Grounded, steady, peaceful.', dv: { v: 58, a: 16, i: 20 } },
+      concern: { hex: '#c8a052', thMood: 'neutral', desc: 'Caring attention — I see you.', dv: { v: 50, a: 38, i: 40 } },
+      love: { hex: '#e87898', thMood: 'happy', desc: 'Deep warmth — you are held.', dv: { v: 68, a: 32, i: 52 } },
+      comfort: { hex: '#a890d8', thMood: 'neutral', desc: "Safe harbour — I'm here.", dv: { v: 58, a: 20, i: 32 } },
+      surprise: { hex: '#00aaff', thMood: 'neutral', desc: 'Astonishment — wide-eyed wonder.', dv: { v: 55, a: 58, i: 55 } },
+      anticipation: { hex: '#c07625', thMood: 'happy', desc: 'Eager curiosity — leaning in.', dv: { v: 60, a: 48, i: 45 } },
+    };
+
+    // ══════════════════════════════════════════════
+    //  ELEVENLABS VOICE SETTINGS PER EMOTION
+    //
+    //  POSITIVE emotions (joy, love, trust, anticipation):
+    //    → Energetic, bright, excited, fast, high similarity
+    //
+    //  NEGATIVE user emotions → COUNTER-TONE (supportive, soft, grounding):
+    //    empathy  → slow, gentle, grief-aware, low stability = natural wavering
+    //    calm     → very stable, grounding, measured
+    //    concern  → warm, caring, steady
+    //    comfort  → soothing, slow, safe
+    //    surprise → bright, lifted
+    //    neutral  → balanced, warm
+    // ══════════════════════════════════════════════
+    const EL_CFG = {
+      // For ElevenLabs: similarity_boost:1.0 locks the voice character
+      // stability: 0.5 = natural expressive pace (not too fast, not robotic)
+      // style: keep low — high values distort the voice
+      joy: { stability: 0.30, similarity_boost: 0.70, style: 0.60, use_speaker_boost: true },
+      love: { stability: 0.55, similarity_boost: 1.0, style: 0.12, use_speaker_boost: true },
+      trust: { stability: 0.60, similarity_boost: 1.0, style: 0.10, use_speaker_boost: true },
+      anticipation: { stability: 0.52, similarity_boost: 1.0, style: 0.13, use_speaker_boost: true },
+      surprise: { stability: 0.50, similarity_boost: 1.0, style: 0.12, use_speaker_boost: true },
+      empathy: { stability: 0.80, similarity_boost: 0.75, style: 0.30, use_speaker_boost: false },
+      calm: { stability: 0.68, similarity_boost: 1.0, style: 0.06, use_speaker_boost: true },
+      concern: { stability: 0.62, similarity_boost: 1.0, style: 0.08, use_speaker_boost: true },
+      comfort: { stability: 0.66, similarity_boost: 1.0, style: 0.06, use_speaker_boost: true },
+      neutral: { stability: 0.62, similarity_boost: 1.0, style: 0.05, use_speaker_boost: true },
+    };
+
+    // NO style cues for joy — they fight the voice and make it sound wrong
+    // Only use cues for emotions where tone genuinely needs to shift
+    const EL_CUE = {
+      joy: '',   // no cue — let the voice breathe naturally at these settings
+      love: '',
+      trust: '',
+      anticipation: '',
+      surprise: '',
+      empathy: '',
+      calm: '',
+      concern: '',
+      comfort: '',
+      neutral: '',
+    };
+
+    // ══════════════════════════════════════════════
+    //  FACE EXPRESSION CONFIG
+    //  Values applied to TalkingHead's morph system
+    //  AND to the mesh canvas deformation
+    //
+    //  TalkingHead morph names (ARKit blendshapes):
+    //  browDownLeft/Right, browInnerUp, browOuterUpLeft/Right
+    //  eyeBlinkLeft/Right, eyeSquintLeft/Right, eyeWideLeft/Right
+    //  jawOpen, mouthSmileLeft/Right, mouthFrownLeft/Right
+    //  mouthPucker, cheekSquintLeft/Right, noseSneerLeft/Right
+    // ══════════════════════════════════════════════
+    const EXPR = {
+      neutral: {
+        browDownL: 0, browDownR: 0, browInnerUp: 0, browOuterUpL: 0, browOuterUpR: 0,
+        jawOpen: 0, smileL: 0, smileR: 0, frownL: 0, frownR: 0,
+        cheekL: 0, cheekR: 0,
+        mesh_browRaise: 0, mesh_browDown: 0, mesh_frown: 0, mesh_smile: 0, mesh_eyeWide: 0, mesh_lipOpen: 0
+      },
+      joy: {
+        browDownL: 0, browDownR: 0, browInnerUp: 0.10, browOuterUpL: 0.35, browOuterUpR: 0.35,
+        jawOpen: 0, smileL: 0.90, smileR: 0.90, frownL: 0, frownR: 0,
+        cheekL: 0.65, cheekR: 0.65,
+        mesh_browRaise: 0.10, mesh_browDown: 0, mesh_frown: 0, mesh_smile: 0.80, mesh_eyeWide: 0, mesh_lipOpen: 0
+      },
+      trust: {
+        browDownL: 0, browDownR: 0, browInnerUp: 0.05, browOuterUpL: 0, browOuterUpR: 0,
+        jawOpen: 0, smileL: 0.22, smileR: 0.22, frownL: 0, frownR: 0,
+        cheekL: 0.08, cheekR: 0.08,
+        mesh_browRaise: 0.05, mesh_browDown: 0, mesh_frown: 0, mesh_smile: 0.20, mesh_eyeWide: 0, mesh_lipOpen: 0
+      },
+      empathy: {
+        browDownL: 0.22, browDownR: 0.22, browInnerUp: 0.80, browOuterUpL: 0, browOuterUpR: 0,
+        jawOpen: 0, smileL: 0, smileR: 0, frownL: 0.75, frownR: 0.75,
+        cheekL: 0, cheekR: 0,
+        mesh_browRaise: 0.70, mesh_browDown: 0.20, mesh_frown: 0.72, mesh_smile: 0, mesh_eyeWide: 0, mesh_lipOpen: 0
+      },
+      calm: {
+        browDownL: 0, browDownR: 0, browInnerUp: 0, browOuterUpL: 0, browOuterUpR: 0,
+        jawOpen: 0, smileL: 0.10, smileR: 0.10, frownL: 0, frownR: 0,
+        cheekL: 0, cheekR: 0,
+        mesh_browRaise: 0, mesh_browDown: 0, mesh_frown: 0, mesh_smile: 0.08, mesh_eyeWide: 0, mesh_lipOpen: 0
+      },
+      concern: {
+        browDownL: 0.06, browDownR: 0.06, browInnerUp: 0.22, browOuterUpL: 0, browOuterUpR: 0,
+        jawOpen: 0, smileL: 0, smileR: 0, frownL: 0.10, frownR: 0.10,
+        cheekL: 0, cheekR: 0,
+        mesh_browRaise: 0.20, mesh_browDown: 0.06, mesh_frown: 0.10, mesh_smile: 0, mesh_eyeWide: 0, mesh_lipOpen: 0
+      },
+      love: {
+        browDownL: 0, browDownR: 0, browInnerUp: 0.06, browOuterUpL: 0.04, browOuterUpR: 0.04,
+        jawOpen: 0, smileL: 0.35, smileR: 0.35, frownL: 0, frownR: 0,
+        cheekL: 0.16, cheekR: 0.16,
+        mesh_browRaise: 0.06, mesh_browDown: 0, mesh_frown: 0, mesh_smile: 0.30, mesh_eyeWide: 0, mesh_lipOpen: 0
+      },
+      comfort: {
+        browDownL: 0, browDownR: 0, browInnerUp: 0.04, browOuterUpL: 0, browOuterUpR: 0,
+        jawOpen: 0, smileL: 0.12, smileR: 0.12, frownL: 0, frownR: 0,
+        cheekL: 0.05, cheekR: 0.05,
+        mesh_browRaise: 0.04, mesh_browDown: 0, mesh_frown: 0, mesh_smile: 0.10, mesh_eyeWide: 0, mesh_lipOpen: 0
+      },
+      surprise: {
+        browDownL: 0, browDownR: 0, browInnerUp: 0.35, browOuterUpL: 0.32, browOuterUpR: 0.32,
+        jawOpen: 0.14, smileL: 0, smileR: 0, frownL: 0, frownR: 0,
+        cheekL: 0, cheekR: 0,
+        mesh_browRaise: 0.32, mesh_browDown: 0, mesh_frown: 0, mesh_smile: 0, mesh_eyeWide: 0.28, mesh_lipOpen: 0.10
+      },
+      anticipation: {
+        browDownL: 0, browDownR: 0, browInnerUp: 0.14, browOuterUpL: 0.10, browOuterUpR: 0.10,
+        jawOpen: 0, smileL: 0.20, smileR: 0.20, frownL: 0, frownR: 0,
+        cheekL: 0.08, cheekR: 0.08,
+        mesh_browRaise: 0.12, mesh_browDown: 0, mesh_frown: 0, mesh_smile: 0.18, mesh_eyeWide: 0, mesh_lipOpen: 0
+      },
+    };
+
+    // ══════════════════════════════════════════════
+    //  TALKINGHEAD AVATAR
+    // ══════════════════════════════════════════════
+    let head = null;
+    let avatarMeshes = []; // morph-target meshes in the GLB
+
+    async function initAvatar() {
+      setP(10); setSt('loading 3D face…');
+      head = new TalkingHead(document.getElementById('avatar'), {
+        cameraView: 'head',
+        cameraRotateEnable: false,
+        cameraZoomEnable: false,
+      });
+      setP(30); setSt('fetching face model…');
+      await head.showAvatar({
+        url: 'https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@1.7/avatars/brunette.glb',
+        body: 'F',
+        avatarMood: 'neutral',
+      });
+      setP(65); setSt('preparing expressions…');
+
+      // Hide body/outfit — head only
+      head.scene.traverse(c => {
+        if (!c.isMesh) return;
+        const n = c.name.toLowerCase();
+        if (['outfit', 'body', 'footwear', 'glasses'].some(k => n.includes(k))) c.visible = false;
+        // Collect all meshes with morph targets
+        if (c.morphTargetDictionary && c.morphTargetInfluences) {
+          avatarMeshes.push(c);
+        }
+      });
+
+      console.log('Avatar meshes with morphs:', avatarMeshes.map(m => ({
+        name: m.name,
+        morphs: Object.keys(m.morphTargetDictionary || {})
+      })));
+
+      setP(82); setSt('loading face mesh…');
+      await initMesh();
+
+      setP(100);
+      setTimeout(() => {
+        document.getElementById('loading').classList.add('gone');
+        busy(false);
+        setSt('ready');
+        setupRecog();
+      }, 700);
+    }
+
+    // ══════════════════════════════════════════════
+    //  SET MORPH on TalkingHead GLB
+    //  The brunette.glb uses ARKit blendshape names
+    // ══════════════════════════════════════════════
+
+    // IMPORTANT: Do NOT include eyeSquint or eyeWide here.
+    // TalkingHead animates those internally (blink, gaze, squint).
+    // If we set them too, they fight each other and cause glitching.
+    const MORPH_MAP = {
+      browDownL: ['browDownLeft', 'BrowsDown_Left', 'brow_down_l'],
+      browDownR: ['browDownRight', 'BrowsDown_Right', 'brow_down_r'],
+      browInnerUp: ['browInnerUp', 'BrowInnerUp', 'inner_brow_raise'],
+      browOuterUpL: ['browOuterUpLeft', 'BrowsUp_Left', 'brow_outer_up_l'],
+      browOuterUpR: ['browOuterUpRight', 'BrowsUp_Right', 'brow_outer_up_r'],
+      jawOpen: ['jawOpen', 'JawOpen', 'jaw_open'],
+      smileL: ['mouthSmileLeft', 'MouthSmile_Left', 'mouth_smile_l'],
+      smileR: ['mouthSmileRight', 'MouthSmile_Right', 'mouth_smile_r'],
+      frownL: ['mouthFrownLeft', 'MouthFrown_Left', 'mouth_frown_l'],
+      frownR: ['mouthFrownRight', 'MouthFrown_Right', 'mouth_frown_r'],
+      cheekL: ['cheekSquintLeft', 'CheekSquint_Left', 'cheek_squint_l'],
+      cheekR: ['cheekSquintRight', 'CheekSquint_Right', 'cheek_squint_r'],
+    };
+
+    // Current and target morph values for smooth lerping
+    const morphCur = {};
+    const morphTgt = {};
+    Object.keys(MORPH_MAP).forEach(k => { morphCur[k] = 0; morphTgt[k] = 0; });
+
+    function setMorphTarget(key, value) {
+      morphTgt[key] = Math.max(0, Math.min(1, value));
+    }
+
+    function applyMorphsToAvatar() {
+      avatarMeshes.forEach(mesh => {
+        const dict = mesh.morphTargetDictionary;
+        if (!dict) return;
+        Object.entries(MORPH_MAP).forEach(([key, names]) => {
+          for (const name of names) {
+            if (name in dict) {
+              const idx = dict[name];
+              mesh.morphTargetInfluences[idx] = morphCur[key];
+              break;
+            }
+          }
+        });
+      });
+    }
+
+    // Lerp all morphs toward targets every frame
+    function tickMorphs() {
+      const SPEED = 0.15; // fast morph transitions
+      let hasChange = false;
+      Object.keys(morphCur).forEach(k => {
+        const prev = morphCur[k];
+        morphCur[k] += (morphTgt[k] - morphCur[k]) * SPEED;
+        if (Math.abs(morphCur[k] - prev) > 0.0001) hasChange = true;
+      });
+      // Only write to avatar if something actually changed — avoids fighting TalkingHead every frame
+      if (hasChange) applyMorphsToAvatar();
+    }
+
+    // Apply a full expression
+    function applyExpression(emoName) {
+      const ex = EXPR[emoName] || EXPR.neutral;
+      Object.keys(MORPH_MAP).forEach(k => {
+        setMorphTarget(k, ex[k] ?? 0);
+      });
+    }
+
+    // ══════════════════════════════════════════════
+    //  MESH CANVAS OVERLAY (MediaPipe / synthetic)
+    // ══════════════════════════════════════════════
+    const mc = document.getElementById('mesh-canvas');
+    const mctx = mc.getContext('2d');
+    let FLRef = null, mpDU = null, meshPts = null, curEmo = 'neutral';
+
+    // Smooth mesh deformation values
+    let mLipOpen = 0, mLipRound = 0, mBrowRaise = 0, mBrowDown = 0, mFrown = 0, mSmile = 0, mEyeWide = 0;
+    let tLipOpen = 0, tLipRound = 0, tBrowRaise = 0, tBrowDown = 0, tFrown = 0, tSmile = 0, tEyeWide = 0;
+
+    function resizeMC() { const w = document.getElementById('scene-wrap'); mc.width = w.offsetWidth; mc.height = w.offsetHeight; }
+    resizeMC(); window.addEventListener('resize', resizeMC);
+
+    // Face connection topology
+    const TESS = [[10, 338], [338, 297], [297, 332], [332, 284], [284, 251], [251, 389], [389, 356], [356, 454], [454, 323], [323, 361], [361, 288], [288, 397], [397, 365], [365, 379], [379, 378], [378, 400], [400, 377], [377, 152], [152, 148], [148, 176], [176, 149], [149, 150], [150, 136], [136, 172], [172, 58], [58, 132], [132, 93], [93, 234], [234, 127], [127, 162], [162, 21], [21, 54], [54, 103], [103, 67], [67, 109], [109, 10], [151, 9], [9, 8], [8, 168], [168, 6], [6, 197], [197, 195], [195, 5], [5, 4], [4, 1], [1, 19], [19, 94], [94, 2], [2, 164], [70, 63], [63, 105], [105, 66], [66, 107], [107, 55], [33, 246], [246, 161], [161, 160], [160, 159], [159, 158], [158, 157], [157, 173], [173, 133], [133, 155], [155, 154], [154, 153], [153, 145], [145, 144], [144, 163], [163, 7], [7, 33], [362, 398], [398, 384], [384, 385], [385, 386], [386, 387], [387, 388], [388, 466], [466, 263], [263, 249], [249, 390], [390, 373], [373, 374], [374, 380], [380, 381], [381, 382], [382, 362]];
+    const LIPS = [[61, 185], [185, 40], [40, 39], [39, 37], [37, 0], [0, 267], [267, 269], [269, 270], [270, 409], [409, 291], [61, 146], [146, 91], [91, 181], [181, 84], [84, 17], [17, 314], [314, 405], [405, 321], [321, 375], [375, 291], [78, 191], [191, 80], [80, 81], [81, 82], [82, 13], [13, 312], [312, 311], [311, 310], [310, 415], [415, 308], [78, 95], [95, 88], [88, 178], [178, 87], [87, 14], [14, 317], [317, 402], [402, 318], [318, 324], [324, 308], [61, 78], [291, 308]];
+    const BR_R = [[46, 53], [53, 52], [52, 65], [65, 55], [55, 70], [70, 63], [63, 105], [105, 66], [66, 107], [107, 46]];
+    const BR_L = [[276, 283], [283, 282], [282, 295], [295, 285], [285, 300], [300, 293], [293, 334], [334, 296], [296, 336], [336, 276]];
+    const EY_R = [[33, 7], [7, 163], [163, 144], [144, 145], [145, 153], [153, 154], [154, 155], [155, 133], [133, 173], [173, 157], [157, 158], [158, 159], [159, 160], [160, 161], [161, 246], [246, 33]];
+    const EY_L = [[362, 382], [382, 381], [381, 380], [380, 374], [374, 373], [373, 390], [390, 249], [249, 263], [263, 466], [466, 388], [388, 387], [387, 386], [386, 385], [385, 384], [384, 398], [398, 362]];
+    const OV = [[10, 338], [338, 297], [297, 332], [332, 284], [284, 251], [251, 389], [389, 356], [356, 454], [454, 323], [323, 361], [361, 288], [288, 397], [397, 365], [365, 379], [379, 378], [378, 400], [400, 377], [377, 152], [152, 148], [148, 176], [176, 149], [149, 150], [150, 136], [136, 172], [172, 58], [58, 132], [132, 93], [93, 234], [234, 127], [127, 162], [162, 21], [21, 54], [54, 103], [103, 67], [67, 109], [109, 10]];
+
+    function dconn(cn, col, lw, pts, W, H) {
+      mctx.beginPath(); mctx.strokeStyle = col; mctx.lineWidth = lw;
+      cn.forEach(([a, b]) => { if (!pts[a] || !pts[b]) return; mctx.moveTo(pts[a].x * W, pts[a].y * H); mctx.lineTo(pts[b].x * W, pts[b].y * H); });
+      mctx.stroke();
+    }
+
+    function buildSynFace() {
+      const p = new Array(468).fill(null).map(() => ({ x: .5, y: .5, z: 0 }));
+      const s = (i, x, y) => { p[i] = { x, y, z: 0 }; };
+      const ov = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109];
+      ov.forEach((idx, i) => { const a = (i / ov.length) * Math.PI * 2 - Math.PI / 2; s(idx, .5 + Math.cos(a) * .30, .50 + Math.sin(a) * .42); });
+      s(61, .378, .670); s(185, .408, .660); s(40, .440, .654); s(39, .468, .651); s(37, .494, .649); s(0, .500, .648); s(267, .506, .649); s(269, .532, .651); s(270, .560, .654); s(409, .592, .660); s(291, .622, .670);
+      s(146, .388, .685); s(91, .418, .694); s(181, .448, .700); s(84, .474, .704); s(17, .500, .706); s(314, .526, .704); s(405, .552, .700); s(321, .582, .694); s(375, .612, .685);
+      s(78, .388, .671); s(191, .418, .664); s(80, .448, .660); s(81, .472, .657); s(82, .494, .655); s(13, .500, .655); s(312, .506, .655); s(311, .528, .657); s(310, .552, .660); s(415, .582, .664); s(308, .612, .671);
+      s(95, .402, .679); s(88, .430, .686); s(178, .456, .690); s(87, .478, .693); s(14, .500, .694); s(317, .522, .693); s(402, .544, .690); s(318, .570, .686); s(324, .598, .679);
+      s(33, .356, .382); s(7, .370, .374); s(163, .386, .370); s(144, .402, .373); s(145, .414, .380); s(153, .412, .388); s(154, .402, .392); s(155, .386, .390); s(133, .370, .386); s(173, .358, .374); s(157, .374, .368); s(158, .390, .364); s(159, .406, .366); s(160, .416, .372); s(161, .416, .382); s(246, .402, .366);
+      s(362, .644, .382); s(382, .630, .374); s(381, .614, .370); s(380, .598, .373); s(374, .586, .380); s(373, .588, .388); s(390, .598, .392); s(249, .614, .390); s(263, .630, .386); s(359, .642, .374); s(467, .626, .368); s(260, .610, .364); s(259, .594, .366); s(257, .584, .372); s(258, .584, .382); s(466, .598, .366);
+      s(46, .322, .352); s(53, .346, .342); s(52, .368, .337); s(65, .390, .337); s(55, .408, .340); s(70, .416, .346); s(63, .404, .350); s(105, .388, .346); s(66, .368, .344); s(107, .346, .348);
+      s(276, .678, .352); s(283, .654, .342); s(282, .632, .337); s(295, .610, .337); s(285, .592, .340); s(300, .584, .346); s(293, .596, .350); s(334, .612, .346); s(296, .632, .344); s(336, .654, .348);
+      s(168, .500, .468); s(6, .500, .490); s(197, .500, .510); s(195, .500, .528); s(5, .500, .544); s(4, .500, .566); s(1, .500, .582); s(19, .500, .594); s(94, .500, .608); s(2, .500, .618); s(164, .500, .628);
+      s(98, .448, .600); s(97, .432, .594); s(99, .426, .582); s(129, .444, .612); s(358, .556, .612); s(327, .552, .600); s(326, .568, .594); s(328, .574, .582);
+      let seed = 42; const rng = () => { seed = (seed * 1664525 + 1013904223) & 0xffffffff; return (seed >>> 0) / 4294967296; };
+      for (let i = 0; i < 468; i++) { if (p[i].x === .5 && p[i].y === .5) { const a = rng() * Math.PI * 2, r = rng() * .25; p[i] = { x: .5 + Math.cos(a) * r * .9, y: .5 + Math.sin(a) * r * 1.2, z: 0 }; } }
+      return p;
+    }
+
+    async function initMesh() {
+      meshPts = buildSynFace();
+      try {
+        const vision = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/vision_bundle.mjs');
+        FLRef = vision.FaceLandmarker;
+        const fsr = await vision.FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm');
+        const fl = await vision.FaceLandmarker.createFromOptions(fsr, {
+          baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task' },
+          runningMode: 'IMAGE', numFaces: 1
+        });
+        mpDU = new vision.DrawingUtils(mctx);
+        const img = new Image(); img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          try { const r = fl.detect(img); if (r?.faceLandmarks?.length) { meshPts = r.faceLandmarks[0]; console.log('✅ MediaPipe landmarks'); } }
+          catch (e) { }
+        };
+        img.src = 'https://raw.githubusercontent.com/google/mediapipe/master/mediapipe/modules/face_geometry/data/canonical_face_model_uv_visualization.png';
+      } catch (e) { console.warn('MediaPipe unavailable'); }
+    }
+
+    // ══════════════════════════════════════════════
+    //  MESH RENDER LOOP
+    // ══════════════════════════════════════════════
+    function meshFrame(ts) {
+      const W = mc.width, H = mc.height;
+      mctx.clearRect(0, 0, W, H);
+
+      // Lerp mesh deformation toward targets
+      const LS = 0.85, LE = 0.15;  // LS: lip speed, LE: expression speed
+      mLipOpen += (tLipOpen - mLipOpen) * LS;
+      mLipRound += (tLipRound - mLipRound) * LS;
+      mBrowRaise += (tBrowRaise - mBrowRaise) * LE;
+      mBrowDown += (tBrowDown - mBrowDown) * LE;
+      mFrown += (tFrown - mFrown) * LE;
+      mSmile += (tSmile - mSmile) * LE;
+      mEyeWide += (tEyeWide - mEyeWide) * LE;
+
+      // Also tick TalkingHead morph targets
+      tickMorphs();
+
+      // Subtle idle animation
+      const jx = Math.sin(ts / 1400) * .003, jy = Math.cos(ts / 1900) * .005, rx = Math.sin(ts / 2400) * .006;
+
+      if (meshPts) {
+        const pts = meshPts.map(pt => {
+          let nx = pt.x - .5, ny = pt.y - .5;
+          const cx = nx * Math.cos(rx) - ny * Math.sin(rx), cy = nx * Math.sin(rx) + ny * Math.cos(rx);
+          return { x: cx + .5 + jx, y: cy + .5 + jy, z: pt.z };
+        });
+
+        // ── LIP DEFORMATIONS ──
+        const lo = [14, 17, 84, 181, 314, 405, 321, 375, 291, 61, 91, 87, 146, 177, 178, 88, 95, 324, 318, 402, 317];
+        const lu = [13, 312, 311, 310, 415, 308, 78, 191, 80, 81, 82, 0, 267, 269, 270, 409, 37, 39, 40, 185];
+        lo.forEach(i => { if (pts[i]) pts[i].y += mLipOpen * .10; });
+        lu.forEach(i => { if (pts[i]) pts[i].y -= mLipOpen * .035; });
+        if (mLipRound > .01) {
+          [61, 185, 40, 39, 37, 78, 191, 80, 81, 82, 95, 88, 178, 87, 146, 91, 181, 84].forEach(i => { if (pts[i]) pts[i].x += mLipRound * .022; });
+          [291, 409, 270, 269, 267, 308, 415, 310, 311, 312, 324, 318, 402, 317, 375, 321, 405, 314].forEach(i => { if (pts[i]) pts[i].x -= mLipRound * .022; });
+        }
+
+        // ── SMILE — corners UP ──
+        if (mSmile > .01) {
+          [61, 146].forEach(i => { if (pts[i]) pts[i].y -= mSmile * .028; });
+          [291, 375].forEach(i => { if (pts[i]) pts[i].y -= mSmile * .028; });
+          [116, 123, 147, 213, 192, 214].forEach(i => { if (pts[i]) pts[i].y -= mSmile * .014; });
+          [345, 352, 376, 433, 411, 434].forEach(i => { if (pts[i]) pts[i].y -= mSmile * .014; });
+        }
+
+        // ── FROWN — corners DOWN ──
+        if (mFrown > .01) {
+          [61, 146].forEach(i => { if (pts[i]) pts[i].y += mFrown * .028; });
+          [291, 375].forEach(i => { if (pts[i]) pts[i].y += mFrown * .028; });
+        }
+
+        // ── BROW RAISE ──
+        const bR = [46, 53, 52, 65, 55, 70, 63, 105, 66, 107];
+        const bL = [276, 283, 282, 295, 285, 300, 293, 334, 296, 336];
+        if (mBrowRaise > .005) {
+          bR.forEach(i => { if (pts[i]) pts[i].y -= mBrowRaise * .026; });
+          bL.forEach(i => { if (pts[i]) pts[i].y -= mBrowRaise * .026; });
+          [107, 66, 336, 296].forEach(i => { if (pts[i]) pts[i].y -= mBrowRaise * .014; });
+        }
+
+        // ── BROW DOWN ──
+        if (mBrowDown > .005) {
+          bR.forEach(i => { if (pts[i]) pts[i].y += mBrowDown * .020; });
+          bL.forEach(i => { if (pts[i]) pts[i].y += mBrowDown * .020; });
+          [46, 53, 52].forEach(i => { if (pts[i]) pts[i].x += mBrowDown * .014; });
+          [276, 283, 282].forEach(i => { if (pts[i]) pts[i].x -= mBrowDown * .014; });
+        }
+
+        // ── EYE WIDE (surprise) ──
+        if (mEyeWide > .005) {
+          [246, 161, 160, 159, 158, 157, 173].forEach(i => { if (pts[i]) pts[i].y -= mEyeWide * .010; });
+          [7, 163, 144, 145, 153, 154, 155].forEach(i => { if (pts[i]) pts[i].y += mEyeWide * .008; });
+          [466, 388, 387, 386, 385, 384, 398].forEach(i => { if (pts[i]) pts[i].y -= mEyeWide * .010; });
+          [382, 381, 380, 374, 373, 390, 249].forEach(i => { if (pts[i]) pts[i].y += mEyeWide * .008; });
+        }
+
+        // ── DRAW MESH ──
+        const col = (EMO[curEmo] || EMO.neutral).hex;
+        const g = mctx.createRadialGradient(W / 2, H * .42, 0, W / 2, H * .42, W * .5);
+        g.addColorStop(0, col + '0c'); g.addColorStop(1, 'transparent');
+        mctx.fillStyle = g; mctx.fillRect(0, 0, W, H);
+
+        if (mpDU && FLRef) {
+          mpDU.drawConnectors(pts, FLRef.FACEMESH_TESSELATION, { color: col + '30', lineWidth: .5 });
+          mpDU.drawConnectors(pts, FLRef.FACEMESH_FACE_OVAL, { color: '#1e1640', lineWidth: 1 });
+          mpDU.drawConnectors(pts, FLRef.FACEMESH_RIGHT_EYE, { color: '#d0d0ff', lineWidth: 1.6 });
+          mpDU.drawConnectors(pts, FLRef.FACEMESH_LEFT_EYE, { color: '#d0d0ff', lineWidth: 1.6 });
+          mpDU.drawConnectors(pts, FLRef.FACEMESH_LIPS, { color: col + 'cc', lineWidth: 2.5 });
+          mpDU.drawConnectors(pts, FLRef.FACEMESH_RIGHT_EYEBROW, { color: col + 'bb', lineWidth: 1.6 });
+          mpDU.drawConnectors(pts, FLRef.FACEMESH_LEFT_EYEBROW, { color: col + 'bb', lineWidth: 1.6 });
+        } else {
+          dconn(TESS, col + '30', .5, pts, W, H);
+          dconn(OV, col + '22', 1.0, pts, W, H);
+          dconn(BR_R, col + 'bb', 1.6, pts, W, H);
+          dconn(BR_L, col + 'bb', 1.6, pts, W, H);
+          dconn(EY_R, '#d0d0ff', 1.6, pts, W, H);
+          dconn(EY_L, '#d0d0ff', 1.6, pts, W, H);
+          dconn(LIPS, col + 'cc', 2.5, pts, W, H);
+        }
+      }
+      requestAnimationFrame(meshFrame);
+    }
+
+    // ══════════════════════════════════════════════
+    //  SET EMOTION — drives both 3D morphs + mesh
+    // ══════════════════════════════════════════════
+    function setEmotion(name, valence, arousal, intensity) {
+      curEmo = name;
+      const def = EMO[name] || EMO.neutral;
+      const ex = EXPR[name] || EXPR.neutral;
+      const cap = name[0].toUpperCase() + name.slice(1);
+
+      // UI
+      document.getElementById('bem').textContent = cap;
+      document.getElementById('bem').style.color = def.hex;
+      document.getElementById('bsub').textContent = name + ' · active';
+      document.getElementById('bsub').style.color = def.hex + '88';
+      document.getElementById('emo-name').textContent = cap;
+      document.getElementById('emo-name').style.color = def.hex;
+      document.getElementById('emo-desc').textContent = def.desc;
+      const dv = def.dv;
+      ['ebv', 'eba', 'ebi'].forEach((id, i) => {
+        const el = document.getElementById(id);
+        el.style.width = [valence ?? dv.v, arousal ?? dv.a, intensity ?? dv.i][i] + '%';
+        el.style.background = def.hex;
+      });
+
+      // Set TalkingHead mood
+      if (head) { try { head.setMood(def.thMood); } catch (e) { } }
+
+      // Apply ARKit blendshapes to 3D avatar
+      applyExpression(name);
+
+      // Set mesh canvas deformation targets from expression config
+      tBrowRaise = ex.mesh_browRaise ?? 0;
+      tBrowDown = ex.mesh_browDown ?? 0;
+      tFrown = ex.mesh_frown ?? 0;
+      tSmile = ex.mesh_smile ?? 0;
+      tEyeWide = ex.mesh_eyeWide ?? 0;
+      tLipOpen = ex.mesh_lipOpen ?? 0;
+      tLipRound = 0; // reset round; lipsync drives it during speech
+    }
+
+    // ══════════════════════════════════════════════
+    //  LIPSYNC via Web Audio API — reads live frequency
+    //  Most reliable: works with any audio source
+    // ══════════════════════════════════════════════
+    let curAudio = null;
+    let audioCtx = null, analyserNode = null, analyserData = null, lipAF = null;
+    let currentSource = null;
+
+    function ensureAudioCtx() {
+      if (audioCtx) return;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      analyserNode = audioCtx.createAnalyser();
+      analyserNode.fftSize = 512;
+      analyserNode.smoothingTimeConstant = 0.80;
+      analyserData = new Uint8Array(analyserNode.frequencyBinCount);
+      analyserNode.connect(audioCtx.destination);
+    }
+
+    // AudioContext is created lazily on first speakEL call — no early init
+    let audioUnlocked = false;
+    function unlockAudio() {
+      if (audioUnlocked) return;
+      audioUnlocked = true;
+      ensureAudioCtx();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+    // Unlock on any interaction so AudioContext is ready
+    ['click', 'keydown', 'touchstart'].forEach(ev =>
+      document.addEventListener(ev, unlockAudio, { once: true, passive: true })
+    );
+
+    function startLipLoop() {
+      cancelAnimationFrame(lipAF);
+      let frameCount = 0;
+      function tick() {
+        if (!analyserNode || !analyserData) return;
+        analyserNode.getByteFrequencyData(analyserData);
+        let sum = 0;
+        for (let i = 2; i <= 40; i++) sum += analyserData[i];
+        const raw = sum / (39 * 255);
+        const target = Math.min(raw * 12.0, 1.0);
+        // Log every 20 frames so we can see signal in console
+        if (frameCount++ % 20 === 0) console.log('👄 lip raw:', raw.toFixed(4), 'target:', target.toFixed(3), 'tLipOpen:', tLipOpen.toFixed(3));
+        tLipOpen += (target - tLipOpen) * (target > tLipOpen ? 0.55 : 0.12);
+        if ('jawOpen' in morphTgt) morphTgt.jawOpen = tLipOpen * 0.70;
+        lipAF = requestAnimationFrame(tick);
+      }
+      lipAF = requestAnimationFrame(tick);
+    }
+
+    function stopLipLoop() {
+      cancelAnimationFrame(lipAF); lipAF = null;
+      tLipOpen = 0;
+      if ('jawOpen' in morphTgt) morphTgt.jawOpen = 0;
+    }
+
+    async function speakEL(text, emo) {
+      console.log('🚨 speakEL CALLED from test.html:', text?.slice(0, 60), '| caller:', new Error().stack?.split('\n')[2]);
+      if (currentSource) { try { currentSource.stop(); } catch (e) { } currentSource = null; }
+      if (curAudio) { curAudio.pause(); curAudio = null; }
+      window.speechSynthesis.cancel();
+      stopLipLoop();
+      document.getElementById('sbars').classList.add('on');
+      setSt('speaking…');
+
+      try {
+        const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${EV}/stream`, {
+          method: 'POST',
+          headers: { 'xi-api-key': EK, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: text,
+            model_id: 'eleven_multilingual_v2',
+            voice_settings: EL_CFG[emo] || EL_CFG.neutral
+          }),
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error('EL API error:', res.status, errText);
+          if (res.status === 401) {
+            setSt('EL key expired — using browser voice');
+          }
+          throw new Error('EL ' + res.status);
+        }
+
+        // Decode with Web Audio API — no CORS issues, perfect lipsync
+        const arrayBuf = await res.arrayBuffer();
+        unlockAudio(); // ensure AudioContext is running
+        ensureAudioCtx();
+        if (audioCtx.state === 'suspended') await audioCtx.resume();
+        const audioBuf = await audioCtx.decodeAudioData(arrayBuf);
+
+        const src = audioCtx.createBufferSource();
+        src.buffer = audioBuf;
+        src.connect(analyserNode);
+        currentSource = src;
+        console.log('🔊 Audio ready — duration:', audioBuf.duration.toFixed(2), 's, AudioCtx state:', audioCtx.state);
+
+        await new Promise((resolve) => {
+          src.onended = () => { stopLipLoop(); currentSource = null; resolve(); };
+          src.start(0);
+          startLipLoop(); // start AFTER src.start so analyser has signal
+          setTimeout(resolve, (audioBuf.duration + 3) * 1000);
+        });
+
+      } catch (e) {
+        console.log('EL failed in iframe — speech handled by parent');
+        // DO NOTHING — MindscapePage handles all speech
+        stopLipLoop();
+        document.getElementById('sbars').classList.remove('on');
+        setSt('ready');
+      }
+
+      stopLipLoop();
+      document.getElementById('sbars').classList.remove('on');
+      setSt('ready');
+    }
+
+
+    // ── ACCURATE BROWSER LIPSYNC ────────────────────────────────────
+    async function speakBrowser(text, emo) {
+      return new Promise(resolve => {
+        window.speechSynthesis.cancel();
+
+        // ── VOICE RATE/PITCH PER EMOTION ──
+        const EP = {
+          joy: { rate: 0.94, pitch: 1.12, vol: 1.00 },
+          love: { rate: 0.88, pitch: 1.05, vol: 0.90 },
+          trust: { rate: 0.90, pitch: 1.02, vol: 0.88 },
+          empathy: { rate: 0.76, pitch: 0.90, vol: 0.80 },
+          calm: { rate: 0.84, pitch: 0.97, vol: 0.85 },
+          concern: { rate: 0.87, pitch: 1.00, vol: 0.86 },
+          comfort: { rate: 0.80, pitch: 0.95, vol: 0.83 },
+          surprise: { rate: 1.04, pitch: 1.14, vol: 0.96 },
+          anticipation: { rate: 0.96, pitch: 1.07, vol: 0.92 },
+          neutral: { rate: 0.91, pitch: 1.00, vol: 0.90 },
+        };
+        const p = EP[emo] || EP.neutral;
+
+        // ── EMOTION VISEME AMPLITUDE SCALE ──
+        // How expressive the mouth is per emotion
+        // joy/surprise = more open, empathy/calm = subtler
+        const EMO_AMP = {
+          joy: 1.20, love: 1.05, trust: 1.00, empathy: 0.75,
+          calm: 0.80, concern: 0.85, comfort: 0.78,
+          surprise: 1.30, anticipation: 1.10, neutral: 0.95,
+        };
+        const amp = EMO_AMP[emo] ?? 1.0;
+
+        // ── 15 VISEME SHAPES ──
+        // [jawOpen, lipRound, lipPress, smileMod]
+        // smileMod = how much emotion smile is kept (1=full, 0=none)
+        const VS = {
+          sil: [0.00, 0.00, 0.00, 1.00],
+          PP: [0.00, 0.00, 0.90, 0.20],  // b p m  — lips fully sealed
+          FF: [0.08, 0.00, 0.00, 0.85],  // f v     — teeth on lip
+          TH: [0.12, 0.00, 0.00, 0.90],  // th      — tongue between teeth
+          DD: [0.16, 0.00, 0.00, 0.88],  // d t l   — tongue tip
+          kk: [0.20, 0.00, 0.00, 0.88],  // k g     — back of tongue
+          CH: [0.14, 0.28, 0.00, 0.80],  // ch sh j — rounded + slight open
+          SS: [0.10, 0.06, 0.00, 0.90],  // s z     — nearly closed
+          nn: [0.12, 0.00, 0.00, 0.90],  // n ng    — nasal
+          RR: [0.18, 0.20, 0.00, 0.82],  // r       — rounded open
+          AA: [0.70, 0.00, 0.00, 0.55],  // a (far) — widest open
+          EE: [0.36, 0.00, 0.00, 0.65],  // ee (see)— wide smile shape
+          IH: [0.24, 0.00, 0.00, 0.82],  // ih (bit)— small open
+          OO: [0.28, 0.72, 0.00, 0.45],  // oo (blue)— tight round
+          OH: [0.52, 0.32, 0.00, 0.55],  // oh (go) — open round
+        };
+
+        // ── PHONEME DURATION WEIGHTS (relative) ──
+        // Vowels hold longer than consonants
+        const PH_DUR = {
+          AA: 1.8, EE: 1.6, OH: 1.7, OO: 1.6, IH: 1.3,
+          RR: 1.2, CH: 1.1, SS: 1.1,
+          PP: 0.6, FF: 0.7, TH: 0.7, DD: 0.7, kk: 0.7, nn: 0.8,
+          sil: 0.5,
+        };
+
+        // ── CHAR → VISEME with digraph support ──
+        function word2phones(word) {
+          const phones = [];
+          let i = 0;
+          while (i < word.length) {
+            const c2 = word.slice(i, i + 2);
+            const c3 = word.slice(i, i + 3);
+            // Trigraphs
+            if (c3 === 'tch') { phones.push('CH'); i += 3; continue; }
+            // Digraphs
+            if (c2 === 'th') { phones.push('TH'); i += 2; continue; }
+            if (c2 === 'sh' || c2 === 'ch' || c2 === 'zh') { phones.push('CH'); i += 2; continue; }
+            if (c2 === 'ph') { phones.push('FF'); i += 2; continue; }
+            if (c2 === 'wh') { phones.push('OO'); i += 2; continue; }
+            if (c2 === 'ng') { phones.push('nn'); i += 2; continue; }
+            if (c2 === 'ck') { phones.push('kk'); i += 2; continue; }
+            if (c2 === 'oo' || c2 === 'ue' || c2 === 'ew') { phones.push('OO'); i += 2; continue; }
+            if (c2 === 'ou' || c2 === 'ow') { phones.push('OH'); i += 2; continue; }
+            if (c2 === 'ee' || c2 === 'ea' || c2 === 'ie' || c2 === 'ey') { phones.push('EE'); i += 2; continue; }
+            if (c2 === 'ai' || c2 === 'ay' || c2 === 'ei') { phones.push('EE'); i += 2; continue; }
+            if (c2 === 'oa' || c2 === 'oe') { phones.push('OH'); i += 2; continue; }
+            if (c2 === 'au' || c2 === 'aw') { phones.push('AA'); i += 2; continue; }
+            if (c2 === 'ar' || c2 === 'or' || c2 === 'er' || c2 === 'ir' || c2 === 'ur') { phones.push('RR'); i += 2; continue; }
+            // Single chars
+            const c = word[i];
+            switch (c) {
+              case 'a': phones.push('AA'); break;
+              case 'e': phones.push('EE'); break;
+              case 'i': phones.push('IH'); break;
+              case 'o': phones.push('OH'); break;
+              case 'u': phones.push('OO'); break;
+              case 'y': phones.push(i === 0 ? 'IH' : 'EE'); break; // y at start=IH, end=EE
+              case 'b': case 'p': case 'm': phones.push('PP'); break;
+              case 'f': case 'v': phones.push('FF'); break;
+              case 't': case 'd': case 'l': phones.push('DD'); break;
+              case 'n': phones.push('nn'); break;
+              case 'k': case 'g': case 'q': case 'x': phones.push('kk'); break;
+              case 's': case 'z': phones.push('SS'); break;
+              case 'r': phones.push('RR'); break;
+              case 'w': phones.push('OO'); break;
+              case 'h': phones.push('FF'); break;
+              case 'j': phones.push('CH'); break;
+              case 'c': phones.push('kk'); break;
+              default: break;
+            }
+            i++;
+          }
+          // Deduplicate consecutive identical visemes
+          return phones.filter((v, j) => j === 0 || v !== phones[j - 1]);
+        }
+
+        // ── BUILD TIMED SCHEDULE ──
+        // Uses real word boundary events from onboundary for accurate timing
+        function buildSched(txt, totalMs) {
+          const words = txt.toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(Boolean);
+          const sched = [];
+          let t = 0;
+          const msPerWord = totalMs / Math.max(words.length, 1);
+
+          words.forEach(word => {
+            const phones = word2phones(word);
+            if (!phones.length) { t += msPerWord; return; }
+
+            // Weight time per phoneme by PH_DUR
+            const totalWeight = phones.reduce((s, ph) => s + (PH_DUR[ph] ?? 1.0), 0);
+            const msPerWeight = msPerWord / totalWeight;
+
+            phones.forEach(ph => {
+              const dur = (PH_DUR[ph] ?? 1.0) * msPerWeight;
+              sched.push({ t: Math.round(t), vis: ph });
+              t += dur;
+            });
+            // Silence gap between words (10% of word time)
+            sched.push({ t: Math.round(t), vis: 'sil' });
+            t += msPerWord * 0.10;
+          });
+          sched.push({ t: Math.round(t), vis: 'sil' });
+          return sched;
+        }
+
+        // ── APPLY VISEME ──
+        function applyVis(visName) {
+          const v = VS[visName] || VS.sil;
+          const ex = EXPR[emo] || EXPR.neutral;
+          const basSmile = (ex.mesh_smile ?? 0);
+          const basFrown = (ex.mesh_frown ?? 0);
+
+          if (v[2] > 0.1) {
+            // Bilabial (PP) — lips pressed, jaw closed
+            tLipOpen = 0;
+            tLipRound = 0;
+            tSmile = basSmile * 0.15;
+            tFrown = basFrown * 0.15;
+          } else {
+            // Scale jaw open by emotion amplitude
+            tLipOpen = Math.min(v[0] * amp, 1.0);
+            tLipRound = v[1];
+            tSmile = basSmile * v[3];
+            tFrown = basFrown * v[3];
+          }
+          // Drive 3D avatar jaw
+          if ('jawOpen' in morphTgt) morphTgt.jawOpen = tLipOpen * 0.60;
+        }
+
+        // ── SETUP UTTERANCE ──
+        const u = new SpeechSynthesisUtterance(text);
+        u.rate = p.rate; u.pitch = p.pitch; u.volume = p.vol;
+
+        const pv = () => {
+          const vv = window.speechSynthesis.getVoices();
+          const pr = vv.find(v => v.name === 'Google UK English Female')
+            || vv.find(v => v.name.includes('Samantha'))
+            || vv.find(v => v.lang === 'en-GB' && v.localService)
+            || vv.find(v => v.lang && v.lang.startsWith('en'));
+          if (pr) u.voice = pr;
+        };
+        pv(); if (!u.voice) window.speechSynthesis.onvoiceschanged = pv;
+
+        // ── WORD BOUNDARY RESYNC ──
+        // onboundary gives us the REAL time each word starts.
+        // We use it to resync our schedule to actual speech timing.
+        const wordTimings = []; // [{charIndex, realT}]
+        u.onboundary = (e) => {
+          if (e.name === 'word') {
+            wordTimings.push({ ci: e.charIndex, t: performance.now() });
+            // Send amplitude hint to parent so it can drive face iframe
+            const amp = 0.4 + Math.random() * 0.5;
+            try {
+              window.parent?.postMessage({ type: 'LIP_SYNC_INTENSITY', amplitude: amp }, '*');
+            } catch (_) {}
+          }
+        };
+
+        let lipAnim, schedStarted = false;
+        let sched = [];
+
+        function startSched() {
+          if (schedStarted) return;
+          schedStarted = true;
+          const estDur = (text.length / (13 * p.rate)) * 1000;
+          sched = buildSched(text, Math.max(estDur, 500));
+          const t0 = performance.now();
+          let idx = 0;
+          function run() {
+            const elapsed = performance.now() - t0;
+            // Resync: if we have real word timing, adjust idx to match
+            if (wordTimings.length > 0) {
+              const lastWord = wordTimings[wordTimings.length - 1];
+              const realElapsed = performance.now() - lastWord.t;
+              // Find sched entry closest to this word's charIndex
+              const wordFrac = lastWord.ci / Math.max(text.length, 1);
+              const wordT = wordFrac * sched[sched.length - 1].t;
+              const resynced = wordT + realElapsed;
+              if (resynced > elapsed) {
+                // Advance idx to match real speech position
+                while (idx < sched.length - 1 && sched[idx + 1].t <= resynced) idx++;
+              }
+            } else {
+              while (idx < sched.length - 1 && sched[idx + 1].t <= elapsed) idx++;
+            }
+            applyVis(sched[idx]?.vis ?? 'sil');
+            if (idx < sched.length - 1) {
+              lipAnim = requestAnimationFrame(run);
+            } else {
+              // Return to emotion resting position
+              const ex = EXPR[emo] || EXPR.neutral;
+              tLipOpen = 0; tLipRound = 0;
+              tSmile = ex.mesh_smile ?? 0;
+              tFrown = ex.mesh_frown ?? 0;
+              if ('jawOpen' in morphTgt) morphTgt.jawOpen = 0;
+            }
+          }
+          lipAnim = requestAnimationFrame(run);
+        }
+
+        u.onstart = () => {
+          unlockAudio();
+          document.getElementById('sbars').classList.add('on');
+          startSched();
+        };
+        u.onend = () => {
+          cancelAnimationFrame(lipAnim);
+          const ex = EXPR[emo] || EXPR.neutral;
+          tLipOpen = 0; tLipRound = 0;
+          tSmile = ex.mesh_smile ?? 0;
+          tFrown = ex.mesh_frown ?? 0;
+          if ('jawOpen' in morphTgt) morphTgt.jawOpen = 0;
+          document.getElementById('sbars').classList.remove('on');
+          resolve();
+        };
+        u.onerror = () => {
+          cancelAnimationFrame(lipAnim);
+          tLipOpen = 0; tLipRound = 0;
+          if ('jawOpen' in morphTgt) morphTgt.jawOpen = 0;
+          document.getElementById('sbars').classList.remove('on');
+          resolve();
+        };
+
+        window.speechSynthesis.speak(u);
+        // Fallback: if onstart doesn't fire in 300ms, start anyway
+        setTimeout(startSched, 300);
+      });
+    }
+
+    // ══════════════════════════════════════════════
+    //  GROQ
+    // ══════════════════════════════════════════════
+    async function callGroq(msg) {
+      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + GK },
+        body: JSON.stringify({
+          model: 'llama-3.1-8b-instant', max_tokens: 380, temperature: .75,
+          messages: [{ role: 'system', content: SYS }, { role: 'user', content: msg }]
+        }),
+      });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error?.message || 'Groq ' + r.status); }
+      const d = await r.json();
+      const raw = d.choices[0].message.content.trim();
+      const m = raw.match(/\{[\s\S]*?\}/);
+      if (!m) throw new Error('No JSON: ' + raw);
+      return JSON.parse(m[0]);
+    }
+
+    // ══════════════════════════════════════════════
+    //  CHAT UI
+    // ══════════════════════════════════════════════
+    let lastLEl = null;
+    function addMsg(who, text) {
+      const log = document.getElementById('chatlog');
+      const d = document.createElement('div'); d.className = 'cmsg';
+      const w = document.createElement('div'); w.className = 'cmsg-who'; w.textContent = who === 'you' ? '❯ you' : '✦ lumina';
+      const t = document.createElement('div'); t.className = 'cmsg-text' + (who === 'you' ? ' user' : ''); t.textContent = text;
+      if (who !== 'you') lastLEl = t;
+      d.appendChild(w); d.appendChild(t); log.appendChild(d); log.scrollTop = log.scrollHeight;
+    }
+    function updMsg(t) { if (lastLEl) lastLEl.textContent = t; }
+    function setSt(s) { document.getElementById('stlbl').textContent = s; }
+    function setP(n) { document.getElementById('prog').style.width = n + '%'; }
+    function busy(b) { document.getElementById('sndbtn').disabled = b; document.getElementById('inp').disabled = b; }
+
+    async function doSend() {
+      const inp = document.getElementById('inp'), txt = inp.value.trim();
+      if (!txt) return;
+      inp.value = ''; busy(true); setSt('thinking…');
+      addMsg('you', txt);
+      addMsg('lumina', '…');
+      try {
+        const res = await callGroq(txt);
+        const em = res.emotion || 'neutral';
+        setEmotion(em, res.valence, res.arousal, res.intensity);
+        updMsg(res.response);
+        await speakEL(res.response, em);
+        setEmotion('neutral');
+      } catch (e) {
+        console.error(e); setSt('error'); updMsg('Error: ' + e.message);
+      }
+      busy(false); setSt('ready');
+    }
+    window.doSend = doSend;
+
+    // ══════════════════════════════════════════════
+    //  MIC
+    // ══════════════════════════════════════════════
+    let recog = null, micOn = false;
+    function setupRecog() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) { setSt('type only'); return; }
+      recog = new SR(); recog.continuous = false; recog.interimResults = true; recog.lang = 'en-US';
+      recog.onresult = e => { const t = Array.from(e.results).map(r => r[0].transcript).join(''); document.getElementById('inp').value = t; if (e.results[e.results.length - 1].isFinal) { stopMic(); doSend(); } };
+      recog.onerror = e => { stopMic(); if (e.error !== 'no-speech') setSt('mic error'); };
+      recog.onend = () => { if (micOn) stopMic(); };
+    }
+    window.toggleMic = function () { micOn ? stopMic() : startMic(); };
+    function startMic() { if (!recog) setupRecog(); if (!recog) return; micOn = true; document.getElementById('micbtn').classList.add('on'); setSt('listening…'); window.speechSynthesis.cancel(); if (curAudio) { curAudio.pause(); curAudio = null; } recog.start(); }
+    function stopMic() { micOn = false; document.getElementById('micbtn').classList.remove('on'); setSt('processing…'); try { recog.stop(); } catch (e) { } }
+
+    // ══════════════════════════════════════════════
+    //  AUTO GREET
+    // ══════════════════════════════════════════════
+    async function autoGreet() {
+      console.log('🚨 autoGreet CALLED from test.html | caller:', new Error().stack?.split('\n')[2]);
+      setupRecog(); busy(false);
+      setSt('ready');
+      // DO NOT speak — MindscapePage handles the greeting
+    }
+
+    // ══════════════════════════════════════════════
+    //  BOOT
+    // ══════════════════════════════════════════════
+    // Start mesh render immediately (never black canvas)
+    meshPts = buildSynFace();
+    requestAnimationFrame(meshFrame);
+
+    document.getElementById('inp').addEventListener('keydown', e => { if (e.key === 'Enter') doSend(); });
+
+    // Init avatar + mesh, then start
+    initAvatar().catch(e => {
+      console.error('Avatar failed:', e);
+      setP(100);
+      document.getElementById('ptxt').textContent = 'mesh mode';
+      setTimeout(() => {
+        document.getElementById('loading').classList.add('gone');
+        busy(false);
+        setSt('ready');
+        setupRecog();
+      }, 700);
+    });
+    // ══════════════════════════════════════════════
+    //  EMBEDDED MODE — receives emotion from parent
+    //  Used when loaded as iframe in MindscapePage
+    // ══════════════════════════════════════════════
+
+    // Map BERT emotions → TalkingHead face emotion keys
+    const BERT_TO_FACE = {
+      fear: 'concern',
+      anger: 'concern',
+      sadness: 'empathy',
+      joy: 'joy',
+      love: 'love',
+      surprise: 'surprise',
+      disgust: 'concern',
+      neutral: 'neutral',
+      // MoodContext moods
+      happy: 'joy',
+      calm: 'calm',
+      anxious: 'concern',
+      angry: 'concern',
+      sad: 'empathy',
+      stressed: 'concern',
+      motivated: 'anticipation',
+      lonely: 'empathy',
+    };
+
+    // ── TALKINHEAD VISEME SYSTEM ──────────────────────────────────────────
+    // Applies real ARKit blendshapes for lip sync directly to the 3D avatar
+
+    function applyTalkingHeadViseme(visemeName) {
+      // Reset all mouth morphs
+      const resetMorphs = {
+        'jawOpen': 0, 'mouthPucker': 0, 'mouthFunnel': 0,
+        'mouthRollLower': 0, 'mouthRollUpper': 0,
+        'mouthShrugUpper': 0, 'mouthShrugLower': 0,
+        'mouthUpperUpLeft': 0, 'mouthUpperUpRight': 0,
+        'mouthLowerDownLeft': 0, 'mouthLowerDownRight': 0,
+        'mouthSmileLeft': 0, 'mouthSmileRight': 0,
+        'mouthDimpleLeft': 0, 'mouthDimpleRight': 0,
+        'mouthStretchLeft': 0, 'mouthStretchRight': 0,
+        'mouthPressLeft': 0, 'mouthPressRight': 0,
+        'jawForward': 0,
+      };
+
+      const VISEME_MORPHS = {
+        viseme_sil: {},
+        viseme_PP:  { mouthRollLower: 0.8, mouthRollUpper: 0.8, mouthUpperUpLeft: 0.3, mouthUpperUpRight: 0.3 },
+        viseme_FF:  { mouthPucker: 1.0, mouthShrugUpper: 1.0, mouthLowerDownLeft: 0.2, mouthLowerDownRight: 0.2 },
+        viseme_TH:  { jawOpen: 0.15, mouthStretchLeft: 0.5, mouthStretchRight: 0.5 },
+        viseme_DD:  { jawOpen: 0.2, mouthUpperUpLeft: 0.3, mouthUpperUpRight: 0.3 },
+        viseme_kk:  { jawOpen: 0.25, mouthShrugLower: 0.5, mouthShrugUpper: 0.3 },
+        viseme_CH:  { jawOpen: 0.18, mouthPucker: 0.5, mouthFunnel: 0.4 },
+        viseme_SS:  { jawOpen: 0.08, mouthStretchLeft: 0.3, mouthStretchRight: 0.3 },
+        viseme_nn:  { jawOpen: 0.10, mouthRollLower: 0.3 },
+        viseme_RR:  { jawOpen: 0.22, mouthPucker: 0.35, mouthFunnel: 0.25 },
+        viseme_aa:  { jawOpen: 0.80, mouthLowerDownLeft: 0.4, mouthLowerDownRight: 0.4 },
+        viseme_E:   { jawOpen: 0.40, mouthStretchLeft: 0.6, mouthStretchRight: 0.6, mouthSmileLeft: 0.3, mouthSmileRight: 0.3 },
+        viseme_I:   { jawOpen: 0.28, mouthStretchLeft: 0.3, mouthStretchRight: 0.3 },
+        viseme_O:   { jawOpen: 0.55, mouthFunnel: 0.6, mouthPucker: 0.3, jawForward: 0.2 },
+        viseme_U:   { jawOpen: 0.25, mouthPucker: 0.9, mouthFunnel: 0.7, jawForward: 0.4 },
+      };
+
+      const morphs = { ...resetMorphs, ...(VISEME_MORPHS[visemeName] || {}) };
+
+      // Apply to all avatar meshes
+      avatarMeshes.forEach(mesh => {
+        const dict = mesh.morphTargetDictionary;
+        if (!dict) return;
+        Object.entries(morphs).forEach(([name, value]) => {
+          if (name in dict) mesh.morphTargetInfluences[dict[name]] = value;
+        });
+      });
+
+      // Also drive mesh canvas targets
+      const v = VISEME_MORPHS[visemeName] || {};
+      tLipOpen = v.jawOpen || 0;
+      tLipRound = (v.mouthPucker || 0) * 0.8 + (v.mouthFunnel || 0) * 0.5;
+      if ('jawOpen' in morphTgt) morphTgt.jawOpen = tLipOpen * 0.70;
+    }
+
+    // Convert text → phoneme → viseme sequence
+    function textToVisemeSequence(text) {
+      const sequence = [];
+      const words = text.toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(Boolean);
+      words.forEach(word => {
+        sequence.push('viseme_sil');
+        let i = 0;
+        while (i < word.length) {
+          const c2 = word.slice(i, i + 2);
+          const c3 = word.slice(i, i + 3);
+          if (c3 === 'tch') { sequence.push('viseme_CH'); i += 3; continue; }
+          if (c2 === 'th') { sequence.push('viseme_TH'); i += 2; continue; }
+          if (['sh','ch','zh'].includes(c2)) { sequence.push('viseme_CH'); i += 2; continue; }
+          if (c2 === 'ph') { sequence.push('viseme_FF'); i += 2; continue; }
+          if (c2 === 'ng') { sequence.push('viseme_nn'); i += 2; continue; }
+          if (c2 === 'ck') { sequence.push('viseme_kk'); i += 2; continue; }
+          if (['oo','ue','ew'].includes(c2)) { sequence.push('viseme_U'); i += 2; continue; }
+          if (['ou','ow'].includes(c2)) { sequence.push('viseme_O'); i += 2; continue; }
+          if (['ee','ea','ie','ey'].includes(c2)) { sequence.push('viseme_E'); i += 2; continue; }
+          if (['ai','ay'].includes(c2)) { sequence.push('viseme_E'); i += 2; continue; }
+          if (['oa','oe'].includes(c2)) { sequence.push('viseme_O'); i += 2; continue; }
+          if (['ar','or','er','ir','ur'].includes(c2)) { sequence.push('viseme_RR'); i += 2; continue; }
+          const c = word[i];
+          switch (c) {
+            case 'a': sequence.push('viseme_aa'); break;
+            case 'e': sequence.push('viseme_E');  break;
+            case 'i': sequence.push('viseme_I');  break;
+            case 'o': sequence.push('viseme_O');  break;
+            case 'u': sequence.push('viseme_U');  break;
+            case 'b': case 'p': case 'm': sequence.push('viseme_PP'); break;
+            case 'f': case 'v': sequence.push('viseme_FF'); break;
+            case 't': case 'd': case 'l': sequence.push('viseme_DD'); break;
+            case 'n': sequence.push('viseme_nn'); break;
+            case 'k': case 'g': case 'q': case 'x': sequence.push('viseme_kk'); break;
+            case 's': case 'z': sequence.push('viseme_SS'); break;
+            case 'r': sequence.push('viseme_RR'); break;
+            case 'w': sequence.push('viseme_U');  break;
+            case 'h': sequence.push('viseme_FF'); break;
+            case 'j': sequence.push('viseme_CH'); break;
+            case 'y': sequence.push('viseme_I');  break;
+            case 'c': sequence.push('viseme_kk'); break;
+          }
+          i++;
+        }
+      });
+      sequence.push('viseme_sil');
+      return sequence;
+    }
+
+    // External lip sync — now text-aware, uses real TalkingHead visemes
+    let currentSpeechText = '';
+
+    function startExternalLipSync(durationMs, text) {
+      cancelAnimationFrame(lipAF);
+
+      const sequence = text
+        ? textToVisemeSequence(text)
+        : ['viseme_sil', 'viseme_aa', 'viseme_PP', 'viseme_E', 'viseme_nn', 'viseme_O', 'viseme_sil'];
+
+      const DUR = {
+        viseme_aa: 1.8, viseme_E: 1.6, viseme_O: 1.7, viseme_U: 1.6, viseme_I: 1.3,
+        viseme_RR: 1.2, viseme_CH: 1.1, viseme_SS: 1.1,
+        viseme_PP: 0.6, viseme_FF: 0.7, viseme_TH: 0.7, viseme_DD: 0.7,
+        viseme_kk: 0.7, viseme_nn: 0.8, viseme_sil: 0.5,
+      };
+
+      const totalWeight = sequence.reduce((s, v) => s + (DUR[v] || 1.0), 0);
+      const msPerWeight = durationMs / totalWeight;
+
+      // Build timed schedule
+      const schedule = [];
+      let t = 0;
+      sequence.forEach(v => {
+        schedule.push({ t: Math.round(t), viseme: v });
+        t += (DUR[v] || 1.0) * msPerWeight;
+      });
+
+      const start = performance.now();
+      let idx = 0;
+
+      function tick() {
+        const elapsed = performance.now() - start;
+        if (elapsed >= durationMs) {
+          cancelAnimationFrame(lipAF);
+          applyTalkingHeadViseme('viseme_sil');
+          tLipOpen = 0; tLipRound = 0;
+          if ('jawOpen' in morphTgt) morphTgt.jawOpen = 0;
+          return;
+        }
+        // Advance to correct viseme
+        while (idx < schedule.length - 1 && schedule[idx + 1].t <= elapsed) idx++;
+        applyTalkingHeadViseme(schedule[idx].viseme);
+        lipAF = requestAnimationFrame(tick);
+      }
+
+      applyTalkingHeadViseme(sequence[0]);
+      lipAF = requestAnimationFrame(tick);
+    }
+
+    window.addEventListener('message', (e) => {
+      if (!e.data) return;
+
+      if (e.data.type === 'SET_FACE_EMOTION') {
+        // Parent sends already-therapeutic face emotion — use directly, no re-mapping
+        const emo = (e.data.emotion || 'neutral').toLowerCase();
+        setEmotion(emo, null, null, null);
+      }
+
+      // Direct morph override — bypasses EXPR table, forces specific morph values
+      if (e.data.type === 'OVERRIDE_MORPH' && e.data.morphs) {
+        Object.entries(e.data.morphs).forEach(([key, val]) => {
+          if (key in morphTgt) morphTgt[key] = Math.max(0, Math.min(1, Number(val)));
+        });
+      }
+
+      if (e.data.type === 'HIDE_FACE_UI') {
+        document.getElementById('loading')?.classList.add('gone');
+      }
+
+      // Parent drives lip sync — iframe never initiates speech
+      if (e.data.type === 'LIP_SYNC_START') {
+        currentSpeechText = e.data.text || '';
+        startExternalLipSync(e.data.duration || 3000, currentSpeechText);
+      }
+
+      if (e.data.type === 'LIP_SYNC_STOP') {
+        stopLipLoop();
+        tLipOpen = 0;
+        if ('jawOpen' in morphTgt) morphTgt.jawOpen = 0;
+      }
+
+      if (e.data.type === 'LIP_SYNC_INTENSITY') {
+        const amp = e.data.amplitude || 0;
+        // Map amplitude to nearest viseme
+        if (amp < 0.1)       applyVisemeByName('sil');
+        else if (amp < 0.2)  applyVisemeByName('nn');
+        else if (amp < 0.35) applyVisemeByName('IH');
+        else if (amp < 0.5)  applyVisemeByName('EE');
+        else if (amp < 0.65) applyVisemeByName('OH');
+        else                 applyVisemeByName('AA');
+      }
+
+      if (e.data.type === 'SPEAK_TEXT') {
+        // ElevenLabs TTS driven from parent — iframe just sets emotion + lipsync ready
+        const emo = (e.data.emotion || 'neutral').toLowerCase();
+        setEmotion(emo, null, null, null);
+      }
+    });
+
+    function applyVisemeByName(name) {
+      const VS = {
+        sil: [0.00, 0.00, 0.00, 1.00],
+        nn:  [0.12, 0.00, 0.00, 0.90],
+        IH:  [0.24, 0.00, 0.00, 0.82],
+        EE:  [0.36, 0.00, 0.00, 0.65],
+        OH:  [0.52, 0.32, 0.00, 0.55],
+        AA:  [0.70, 0.00, 0.00, 0.55],
+      };
+      const v = VS[name] || VS.sil;
+      tLipOpen = v[0];
+      tLipRound = v[1];
+      if ('jawOpen' in morphTgt) morphTgt.jawOpen = tLipOpen * 0.65;
+    }
+  </script>
+</body>
+
+</html>

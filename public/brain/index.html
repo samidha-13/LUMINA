@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LUMINA — Brain Neural Network</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400&family=Cormorant+Garamond:wght@300;400&display=swap');
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:#050508;overflow:hidden;font-family:'JetBrains Mono',monospace;}
+    canvas{display:block;position:fixed;inset:0;}
+    #loading{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#050508;gap:16px;transition:opacity 1s ease;}
+    #loading.gone{opacity:0;pointer-events:none;}
+    #loading span{font-size:11px;letter-spacing:0.3em;color:rgba(255,255,255,0.3);}
+    .bar-track{width:200px;height:1px;background:rgba(255,255,255,0.08);}
+    .bar-fill{height:100%;background:#0d9488;width:0%;transition:width 0.3s ease;}
+    #panel{display: none;}
+    .panel-title{font-size:9px;letter-spacing:0.2em;color:rgba(255,255,255,0.2);text-transform:uppercase;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.06);}
+    .e-btn{display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:7px;border:1px solid transparent;background:transparent;cursor:pointer;transition:all 0.25s ease;width:100%;}
+    .e-btn:hover{background:rgba(255,255,255,0.04);}
+    .e-btn.active{background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.13);}
+    .e-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+    .e-btn.active .e-dot{box-shadow:0 0 8px 2px var(--ec);}
+    .e-name{font-size:11px;color:rgba(255,255,255,0.45);letter-spacing:0.07em;transition:color 0.25s;}
+    .e-btn.active .e-name{color:rgba(255,255,255,0.9);}
+    .e-rgn{font-size:8px;color:rgba(255,255,255,0.18);}
+    .divider{height:1px;background:rgba(255,255,255,0.05);margin:3px 0;}
+    #info{display: none;}
+    .i-block{display:flex;flex-direction:column;gap:4px;}
+    .i-lbl{font-size:9px;letter-spacing:0.18em;color:rgba(255,255,255,0.2);text-transform:uppercase;}
+    .i-val{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:300;color:rgba(255,255,255,0.85);line-height:1;transition:color 0.8s;}
+    .i-sub{font-size:9px;color:rgba(255,255,255,0.2);}
+    #topbar{position:fixed;top:0;left:0;right:0;border-bottom:1px solid rgba(255,255,255,0.06);background:rgba(5,5,8,0.9);padding:13px 22px;display:flex;align-items:center;justify-content:space-between;z-index:10;}
+    .logo{display: none;}
+    #badge{display: none;}
+    #badge-dot{width:7px;height:7px;border-radius:50%;background:#4a5568;transition:background 0.8s,box-shadow 0.8s;}
+    #badge-name{font-size:10px;letter-spacing:0.2em;color:rgba(255,255,255,0.3);transition:color 0.8s;}
+    #stats{display: none;}
+    .stat-box{padding:13px 14px;border-left:1px solid rgba(255,255,255,0.06);text-align:center;min-width:65px;}
+    .stat-v{font-size:15px;color:rgba(255,255,255,0.8);display:block;line-height:1;}
+    .stat-l{font-size:8px;color:rgba(255,255,255,0.2);letter-spacing:0.12em;display:block;margin-top:3px;}
+    #bottom{display: none;}
+    #bottom span{font-size:9px;letter-spacing:0.14em;color:rgba(255,255,255,0.2);text-transform:uppercase;}
+    .ibar{display:flex;align-items:center;gap:9px;}
+    .itrack{width:90px;height:1px;background:rgba(255,255,255,0.08);}
+    .ifill{height:100%;background:#4a5568;width:30%;transition:width 1s ease,background 0.8s ease;}
+
+    /* Camera view controls */
+    #view-controls{display: none;}
+    .vc-group{display:flex;gap:4px;padding:6px 8px;border-radius:9px;border:1px solid rgba(255,255,255,0.07);background:rgba(5,5,8,0.88);backdrop-filter:blur(12px);}
+    .vc-sep{width:1px;background:rgba(255,255,255,0.07);margin:0 2px;}
+    .vb{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.12em;padding:5px 10px;border-radius:5px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:rgba(255,255,255,0.35);cursor:pointer;transition:all 0.2s ease;white-space:nowrap;}
+    .vb:hover{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.75);border-color:rgba(255,255,255,0.15);}
+    .vb.active{background:rgba(255,255,255,0.09);color:rgba(255,255,255,0.9);border-color:rgba(255,255,255,0.2);}
+    .vb svg{display:inline-block;vertical-align:middle;margin-right:4px;opacity:0.6;}
+  </style>
+</head>
+<body>
+
+<div id="loading">
+  <span>LUMINA</span>
+  <div class="bar-track"><div class="bar-fill" id="bar"></div></div>
+  <span id="bar-text">Loading brain...</span>
+</div>
+
+<div id="topbar">
+  <div id="lm-tabs" style="display:flex; align-items:center; gap:8px;"></div>
+  <div class="logo" style="position: absolute; left: 50%; transform: translateX(-50%);">LUMINA</div>
+  <div id="badge"><div id="badge-dot"></div><span id="badge-name">Neutral</span></div>
+</div>
+<div id="stats">
+  <div class="stat-box"><span class="stat-v" id="s-n">0</span><span class="stat-l">NEURONS</span></div>
+  <div class="stat-box"><span class="stat-v" id="s-s">0</span><span class="stat-l">SYNAPSES</span></div>
+  <div class="stat-box"><span class="stat-v" id="s-a">0</span><span class="stat-l">ACTIVE</span></div>
+  <div class="stat-box"><span class="stat-v" id="s-f">0</span><span class="stat-l">FIRING/S</span></div>
+</div>
+
+<div id="panel">
+  <div class="panel-title">Activate Region</div>
+  <button class="e-btn active" data-e="neutral" style="--ec:#888888" onclick="setEmotion('neutral')"><div class="e-dot" style="background:#888888"></div><div><div class="e-name">Neutral</div><div class="e-rgn">Prefrontal</div></div></button>
+  <button class="e-btn" data-e="joy" style="--ec:#44ff88" onclick="setEmotion('joy')"><div class="e-dot" style="background:#44ff88"></div><div><div class="e-name">Joy</div><div class="e-rgn">Frontal Lobe</div></div></button>
+  <button class="e-btn" data-e="trust" style="--ec:#ff44aa" onclick="setEmotion('trust')"><div class="e-dot" style="background:#ff44aa"></div><div><div class="e-name">Love (Trust)</div><div class="e-rgn">Frontal Lobe</div></div></button>
+  <div class="divider"></div>
+  <button class="e-btn" data-e="fear" style="--ec:#ff8c00" onclick="setEmotion('fear')"><div class="e-dot" style="background:#ff8c00"></div><div><div class="e-name">Fear</div><div class="e-rgn">Temporal Lobe</div></div></button>
+  <button class="e-btn" data-e="anger" style="--ec:#ff4444" onclick="setEmotion('anger')"><div class="e-dot" style="background:#ff4444"></div><div><div class="e-name">Anger</div><div class="e-rgn">Temporal Lobe</div></div></button>
+  <div class="divider"></div>
+  <button class="e-btn" data-e="sadness" style="--ec:#4488ff" onclick="setEmotion('sadness')"><div class="e-dot" style="background:#4488ff"></div><div><div class="e-name">Sadness</div><div class="e-rgn">Parietal Lobe</div></div></button>
+  <button class="e-btn" data-e="surprise" style="--ec:#aa44ff" onclick="setEmotion('surprise')"><div class="e-dot" style="background:#aa44ff"></div><div><div class="e-name">Surprise</div><div class="e-rgn">Occipital Lobe</div></div></button>
+  <div class="divider"></div>
+  <button class="e-btn" data-e="anticipation" style="--ec:#c07a2b" onclick="setEmotion('anticipation')"><div class="e-dot" style="background:#c07a2b"></div><div><div class="e-name">Anticipation</div><div class="e-rgn">Cerebellum</div></div></button>
+  <button class="e-btn" data-e="disgust" style="--ec:#886633" onclick="setEmotion('disgust')"><div class="e-dot" style="background:#886633"></div><div><div class="e-name">Disgust</div><div class="e-rgn">Brain Stem</div></div></button>
+</div>
+
+<div id="info">
+  <div class="panel-title">Neural State</div>
+  <div class="i-block"><div class="i-lbl">Region</div><div class="i-val" id="i-r">—</div><div class="i-sub" id="i-s">Awaiting input</div></div>
+  <div class="i-block"><div class="i-lbl">Confidence</div><div class="i-val" id="i-c">—</div><div class="i-sub">detection score</div></div>
+  <div class="i-block"><div class="i-lbl">Intensity</div><div class="i-val" id="i-i">—</div><div class="i-sub">neural activity</div></div>
+  <div class="i-block">
+    <div class="i-lbl">Legend</div>
+    <div style="display:flex;flex-direction:column;gap:5px;margin-top:6px">
+      <div style="display:flex;align-items:center;gap:7px"><div style="width:7px;height:7px;border-radius:50%;background:#d4a843"></div><span style="font-size:9px;color:rgba(255,255,255,0.3)">Joy</span></div>
+      <div style="display:flex;align-items:center;gap:7px"><div style="width:7px;height:7px;border-radius:50%;background:#3a8f6e"></div><span style="font-size:9px;color:rgba(255,255,255,0.3)">Trust</span></div>
+      <div style="display:flex;align-items:center;gap:7px"><div style="width:7px;height:7px;border-radius:50%;background:#8b2fc9"></div><span style="font-size:9px;color:rgba(255,255,255,0.3)">Fear</span></div>
+      <div style="display:flex;align-items:center;gap:7px"><div style="width:7px;height:7px;border-radius:50%;background:#c0392b"></div><span style="font-size:9px;color:rgba(255,255,255,0.3)">Anger</span></div>
+      <div style="display:flex;align-items:center;gap:7px"><div style="width:7px;height:7px;border-radius:50%;background:#3a5fa8"></div><span style="font-size:9px;color:rgba(255,255,255,0.3)">Sadness</span></div>
+      <div style="display:flex;align-items:center;gap:7px"><div style="width:7px;height:7px;border-radius:50%;background:#2a7fbf"></div><span style="font-size:9px;color:rgba(255,255,255,0.3)">Surprise</span></div>
+      <div style="display:flex;align-items:center;gap:7px"><div style="width:7px;height:7px;border-radius:50%;background:#c07a2b"></div><span style="font-size:9px;color:rgba(255,255,255,0.3)">Anticipation</span></div>
+      <div style="display:flex;align-items:center;gap:7px"><div style="width:7px;height:7px;border-radius:50%;background:#6b8c3a"></div><span style="font-size:9px;color:rgba(255,255,255,0.3)">Disgust</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Camera view controls -->
+<div id="view-controls">
+  <div class="vc-group">
+    <button class="vb" data-v="front"  onclick="snapView('front')">FRONT</button>
+    <button class="vb" data-v="back"   onclick="snapView('back')">BACK</button>
+    <button class="vb" data-v="left"   onclick="snapView('left')">LEFT</button>
+    <button class="vb" data-v="right"  onclick="snapView('right')">RIGHT</button>
+    <button class="vb" data-v="top"    onclick="snapView('top')">TOP</button>
+    <button class="vb" data-v="bottom" onclick="snapView('bottom')">BOTTOM</button>
+  </div>
+  <div class="vc-sep"></div>
+  <div class="vc-group">
+    <button class="vb vb-zoom" onclick="zoomStep(-1)">−</button>
+    <button class="vb vb-zoom" onclick="zoomStep(1)">+</button>
+  </div>
+  <div class="vc-sep"></div>
+  <div class="vc-group">
+    <button class="vb vb-on" id="vb-rot" onclick="toggleAutoRotate()">⟳ ON</button>
+  </div>
+</div>
+
+<div id="bottom">
+  <span id="bot-l">Prefrontal · Neutral</span>
+  <div class="ibar"><span>Intensity</span><div class="itrack"><div class="ifill" id="ifill"></div></div><span id="ipct">30%</span></div>
+  <span>Real-time Neural Mapping</span>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+
+// ─── EMOTIONS ────────────────────────────────────────────────────────────────
+const EMOTIONS = {
+  neutral:      {color:0x888888,hex:'#888888',region:'Prefrontal',    label:'Neutral',      intensity:0.25,confidence:0.50,zone:'front'},
+  joy:          {color:0x44ff88,hex:'#44ff88',region:'Frontal Lobe',  label:'Joy',          intensity:0.90,confidence:0.92,zone:'front'},
+  trust:        {color:0xff44aa,hex:'#ff44aa',region:'Frontal Lobe',  label:'Love',         intensity:0.65,confidence:0.81,zone:'front'},
+  love:         {color:0xff44aa,hex:'#ff44aa',region:'Frontal Lobe',  label:'Love',         intensity:0.65,confidence:0.81,zone:'front'},
+  fear:         {color:0xff8c00,hex:'#ff8c00',region:'Temporal Lobe', label:'Fear',         intensity:0.85,confidence:0.88,zone:'sides'},
+  anger:        {color:0xff4444,hex:'#ff4444',region:'Temporal Lobe', label:'Anger',        intensity:0.95,confidence:0.91,zone:'sides'},
+  sadness:      {color:0x4488ff,hex:'#4488ff',region:'Parietal Lobe', label:'Sadness',      intensity:0.55,confidence:0.87,zone:'top'},
+  surprise:     {color:0xaa44ff,hex:'#aa44ff',region:'Occipital',     label:'Surprise',     intensity:0.75,confidence:0.79,zone:'back'},
+  anticipation: {color:0xc07a2b,hex:'#c07a2b',region:'Cerebellum',    label:'Anticipation', intensity:0.70,confidence:0.77,zone:'back-low'},
+  disgust:      {color:0x886633,hex:'#886633',region:'Brain Stem',    label:'Disgust',      intensity:0.50,confidence:0.74,zone:'stem'},
+};
+const ADJACENT = {
+  front:['top','sides'], sides:['front','top','back'],
+  top:['front','sides','back'], back:['top','sides','back-low'],
+  'back-low':['back','stem'], stem:['back-low'],
+};
+
+// ─── SCENE ───────────────────────────────────────────────────────────────────
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050508);
+scene.fog = new THREE.FogExp2(0x050508, 0.018);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
+camera.position.set(0, 0, 11);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.9;
+document.body.appendChild(renderer.domElement);
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.05;
+controls.minDistance = 3; controls.maxDistance = 22;
+controls.autoRotate = true; controls.autoRotateSpeed = 0.25;
+let rt;
+renderer.domElement.addEventListener('pointerdown', ()=>{ controls.autoRotate=false; });
+renderer.domElement.addEventListener('pointerup', ()=>{ clearTimeout(rt); rt=setTimeout(()=>{ controls.autoRotate=true; }, 4000); });
+
+// Lights
+scene.add(new THREE.AmbientLight(0x111122, 0.8));
+const kl = new THREE.DirectionalLight(0xffeedd, 0.9); kl.position.set(5,8,5); scene.add(kl);
+const fl = new THREE.DirectionalLight(0x4488ff, 0.25); fl.position.set(-6,2,3); scene.add(fl);
+const rl = new THREE.DirectionalLight(0x0d9488, 0.3); rl.position.set(0,-3,-8); scene.add(rl);
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const neurons = [], synapses = [], signals = [];
+const nGroup = new THREE.Group(), sGroup = new THREE.Group();
+scene.add(sGroup); scene.add(nGroup);
+const nGeo  = new THREE.SphereGeometry(0.055, 8, 8);
+const sigGeo = new THREE.SphereGeometry(0.038, 6, 6);
+let brainMeshes = [], currentEmotion = 'neutral', firingCnt = 0, lastSec = 0;
+
+// ─── RAYCASTING: IS POINT INSIDE BRAIN? ──────────────────────────────────────
+// Shoots rays in 3 axes and uses majority vote — much more reliable than single ray
+const _ray = new THREE.Raycaster();
+const _axes = [
+  new THREE.Vector3(1,0,0), new THREE.Vector3(0,1,0), new THREE.Vector3(0,0,1)
+];
+function isInsideBrain(pt) {
+  if (!brainMeshes.length) return true;
+  let votes = 0;
+  for (const dir of _axes) {
+    _ray.set(pt, dir);
+    let hits = 0;
+    brainMeshes.forEach(m => { hits += _ray.intersectObject(m, false).length; });
+    if (hits % 2 === 1) votes++;
+  }
+  return votes >= 2; // majority: at least 2 of 3 axes say inside
+}
+
+// ─── ZONE CLASSIFIER ─────────────────────────────────────────────────────────
+// Tags each point based on its position RELATIVE to the brain's center.
+// This works regardless of which rotation the GLB came in at.
+// Assumes standard anatomical orientation after -90°X rotation:
+//   +Z = front (face),  -Z = back (occipital)
+//   +Y = top (crown),   -Y = bottom (brain stem)
+//   ±X = left / right
+function classifyZone(pt, C, S) {
+  // Normalise to [-1, +1] range from center
+  const nx = (pt.x - C.x) / (S.x * 0.5);
+  const ny = (pt.y - C.y) / (S.y * 0.5);
+  const nz = (pt.z - C.z) / (S.z * 0.5);
+
+  // Brain stem: bottom-center column
+  if (ny < -0.30 && Math.abs(nx) < 0.35) return 'stem';
+
+  // Cerebellum: bottom-back
+  if (ny < -0.05 && nz < -0.10) return 'back-low';
+
+  // Frontal lobe: front portion
+  if (nz >  0.15) return 'front';
+
+  // Occipital lobe: back upper
+  if (nz < -0.15 && ny > -0.05) return 'back';
+
+  // Parietal: top crown
+  if (ny >  0.25) return 'top';
+
+  // Temporal: left/right sides (middle height)
+  if (Math.abs(nx) > 0.30) return 'sides';
+
+  // Default: front (central/prefrontal)
+  return 'front';
+}
+
+// ─── SPAWN NEURONS: FILL ENTIRE BRAIN ────────────────────────────────────────
+const TOTAL_NEURONS = 160; // increase for denser network
+const SYNAPSE_DIST  = 1.4;  // max distance between connected neurons
+
+function spawnNeurons(worldBox) {
+  while (nGroup.children.length) nGroup.remove(nGroup.children[0]);
+  neurons.length = 0;
+
+  const C = worldBox.getCenter(new THREE.Vector3());
+  const S = worldBox.getSize(new THREE.Vector3());
+
+  // Shrink box slightly so neurons never poke out the surface
+  const shrink = 0.88;
+  const hx = S.x * 0.5 * shrink;
+  const hy = S.y * 0.5 * shrink;
+  const hz = S.z * 0.5 * shrink;
+
+  let placed = 0;
+  let attempts = 0;
+  const MAX_ATTEMPTS = TOTAL_NEURONS * 80;
+
+  while (placed < TOTAL_NEURONS && attempts < MAX_ATTEMPTS) {
+    attempts++;
+
+    // Random point anywhere inside the bounding box
+    const pt = new THREE.Vector3(
+      C.x + (Math.random() * 2 - 1) * hx,
+      C.y + (Math.random() * 2 - 1) * hy,
+      C.z + (Math.random() * 2 - 1) * hz
+    );
+
+    // Reject if outside the actual brain mesh
+    if (!isInsideBrain(pt)) continue;
+
+    // Classify zone by position
+    const zone = classifyZone(pt, C, S);
+
+    const s = 0.55 + Math.random() * 0.85;
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0x1a1a2e,
+      emissive: new THREE.Color(0,0,0),
+      emissiveIntensity: 0,
+      roughness: 0.45,
+      metalness: 0.18
+    });
+    const mesh = new THREE.Mesh(nGeo, mat);
+    mesh.position.copy(pt);
+    mesh.scale.setScalar(s);
+    nGroup.add(mesh);
+
+    neurons.push({
+      mesh, zone,
+      pos: pt.clone(),
+      activeFactor: 0, targetFactor: 0, targetColor: null,
+      pulsePhase:  Math.random() * Math.PI * 2,
+      pulseSpeed:  0.020 + Math.random() * 0.018,
+      baseScale: s
+    });
+    placed++;
+  }
+
+  console.log(`Placed ${placed} neurons in ${attempts} attempts`);
+  buildSynapses();
+  document.getElementById('s-n').textContent = neurons.length;
+}
+
+function buildSynapses() {
+  while (sGroup.children.length) sGroup.remove(sGroup.children[0]);
+  synapses.length = 0;
+
+  for (let i = 0; i < neurons.length; i++) {
+    // Each neuron connects to at most 5 nearest neighbours to avoid overload
+    let connections = 0;
+    for (let j = i+1; j < neurons.length && connections < 5; j++) {
+      const d = neurons[i].pos.distanceTo(neurons[j].pos);
+      if (d < SYNAPSE_DIST) {
+        const geo = new THREE.BufferGeometry().setFromPoints([
+          neurons[i].pos.clone(), neurons[j].pos.clone()
+        ]);
+        const mat = new THREE.LineBasicMaterial({
+          color: 0x334455, transparent: true, opacity: 0.04
+        });
+        const line = new THREE.Line(geo, mat);
+        sGroup.add(line);
+        synapses.push({ line, iA: i, iB: j });
+        connections++;
+      }
+    }
+  }
+  document.getElementById('s-s').textContent = synapses.length;
+}
+
+// ─── FIRE SIGNAL ─────────────────────────────────────────────────────────────
+function fireSignal(fi, ti, color) {
+  const mat  = new THREE.MeshBasicMaterial({color, transparent:true, opacity:1});
+  const mesh = new THREE.Mesh(sigGeo, mat);
+  scene.add(mesh);
+  signals.push({ mesh, fi, ti, progress:0, speed: 0.012+Math.random()*0.016 });
+  firingCnt++;
+}
+
+function updateSignals() {
+  for (let i = signals.length-1; i >= 0; i--) {
+    const s = signals[i];
+    s.progress += s.speed;
+    if (s.progress >= 1) { scene.remove(s.mesh); signals.splice(i, 1); continue; }
+    s.mesh.position.lerpVectors(neurons[s.fi].pos, neurons[s.ti].pos, s.progress);
+    s.mesh.material.opacity = 1 - s.progress * 0.6;
+  }
+}
+
+// ─── UPDATE NEURONS ───────────────────────────────────────────────────────────
+function updateNeurons(ts) {
+  let active = 0;
+  const dim = new THREE.Color(0,0,0);
+
+  neurons.forEach((n, idx) => {
+    n.activeFactor += (n.targetFactor - n.activeFactor) * 0.035;
+    if (n.activeFactor > 0.05) active++;
+
+    n.pulsePhase += n.pulseSpeed;
+    const pulse = 1 + Math.sin(n.pulsePhase) * (n.activeFactor > 0.1 ? 0.30 * n.activeFactor : 0.04);
+    n.mesh.scale.setScalar(n.baseScale * pulse);
+
+    const tc = n.targetColor || dim;
+    const me = n.mesh.material.emissive;
+    me.r += (tc.r - me.r) * 0.045;
+    me.g += (tc.g - me.g) * 0.045;
+    me.b += (tc.b - me.b) * 0.045;
+    n.mesh.material.emissiveIntensity += (n.activeFactor * 1.8 - n.mesh.material.emissiveIntensity) * 0.045;
+
+    if (n.activeFactor > 0.5 && Math.random() < 0.005) {
+      const conns = synapses.filter(s => s.iA===idx || s.iB===idx);
+      if (conns.length) {
+        const s = conns[Math.floor(Math.random() * conns.length)];
+        fireSignal(idx, s.iA===idx ? s.iB : s.iA, EMOTIONS[currentEmotion].color);
+      }
+    }
+  });
+
+  synapses.forEach(s => {
+    const af = (neurons[s.iA].activeFactor + neurons[s.iB].activeFactor) * 0.5;
+    const to = af > 0.05 ? 0.04 + af * 0.35 : 0.025;
+    s.line.material.opacity += (to - s.line.material.opacity) * 0.06;
+    s.line.material.color.setHex(af > 0.05 ? EMOTIONS[currentEmotion].color : 0x334455);
+  });
+
+  document.getElementById('s-a').textContent = active;
+  if (ts - lastSec > 1000) {
+    document.getElementById('s-f').textContent = firingCnt;
+    firingCnt = 0; lastSec = ts;
+  }
+}
+
+// ─── SET EMOTION ─────────────────────────────────────────────────────────────
+function setEmotion(name) {
+  currentEmotion = name;
+  const em = EMOTIONS[name];
+  const tc  = new THREE.Color(em.color);
+  const dim = new THREE.Color(0,0,0);
+
+  document.querySelectorAll('.e-btn').forEach(b => b.classList.toggle('active', b.dataset.e===name));
+  document.getElementById('badge-dot').style.cssText  = `background:${em.hex};box-shadow:0 0 12px ${em.hex}`;
+  document.getElementById('badge-name').textContent   = em.label;
+  document.getElementById('i-r').textContent          = em.region;
+  document.getElementById('i-r').style.color          = em.hex;
+  document.getElementById('i-s').textContent          = em.label + ' response active';
+  document.getElementById('i-c').textContent          = Math.round(em.confidence*100) + '%';
+  document.getElementById('i-i').textContent          = Math.round(em.intensity*10) + '/10';
+  document.getElementById('ifill').style.cssText      = `width:${em.intensity*100}%;background:${em.hex}`;
+  document.getElementById('ipct').textContent         = Math.round(em.intensity*100) + '%';
+  document.getElementById('bot-l').textContent        = em.region + ' · ' + em.label;
+
+  neurons.forEach(n => {
+    const primary = n.zone === em.zone;
+    const adj = !primary && (ADJACENT[em.zone]||[]).includes(n.zone);
+    n.targetFactor = primary ? em.intensity : adj ? em.intensity * 0.22 : 0;
+    n.targetColor  = primary ? tc.clone() : adj ? tc.clone().multiplyScalar(0.28) : dim.clone();
+  });
+
+  // Initial burst of signals in active zone
+  const actives = neurons.filter(n => n.zone === em.zone);
+  for (let k = 0; k < Math.min(25, actives.length); k++) {
+    const from = actives[Math.floor(Math.random() * actives.length)];
+    const fi   = neurons.indexOf(from);
+    const conns = synapses.filter(s => s.iA===fi || s.iB===fi);
+    if (conns.length) {
+      const s = conns[Math.floor(Math.random() * conns.length)];
+      fireSignal(fi, s.iA===fi ? s.iB : s.iA, em.color);
+    }
+  }
+}
+
+// ─── LOAD GLB ────────────────────────────────────────────────────────────────
+const loader = new THREE.GLTFLoader();
+loader.load('brain.glb',
+  gltf => {
+    const root = gltf.scene;
+
+    // ── 1. Centre the raw model ──────────────────────────────────────────────
+    const rawBox    = new THREE.Box3().setFromObject(root);
+    const rawCenter = rawBox.getCenter(new THREE.Vector3());
+    const rawSize   = rawBox.getSize(new THREE.Vector3());
+    root.position.sub(rawCenter);
+
+    // ── 2. Scale to fit a ~6-unit cube ───────────────────────────────────────
+    const sc = 6 / Math.max(rawSize.x, rawSize.y, rawSize.z);
+    root.scale.setScalar(sc);
+
+    // ── 3. Rotation: -90°X stands upright for Sketchfab models ────────────
+    root.rotation.set(-Math.PI / 2, 0, 0);
+
+    // ── 4. Transparent shell — keep DoubleSide for raycasting ────────────────
+    brainMeshes = [];
+    root.traverse(child => {
+      if (child.isMesh) {
+        child.material = child.material.clone();
+        child.material.transparent  = true;
+        child.material.opacity      = 0.22;   // very subtle shell
+        child.material.depthWrite   = false;
+        child.material.roughness    = 0.80;
+        child.material.metalness    = 0.05;
+        child.material.side         = THREE.DoubleSide; // required for inside-test
+        brainMeshes.push(child);
+      }
+    });
+
+    scene.add(root);
+
+    // ── 5. World bbox AFTER all transforms ───────────────────────────────────
+    const worldBox    = new THREE.Box3().setFromObject(root);
+    const worldCenter = worldBox.getCenter(new THREE.Vector3());
+    const worldSize   = worldBox.getSize(new THREE.Vector3());
+    console.log('World center:', worldCenter, '| Size:', worldSize);
+
+    // Store for snap views
+    brainCenter.copy(worldCenter);
+    brainRadius = worldSize.length() * 0.68;
+
+    document.getElementById('bar').style.width   = '70%';
+    document.getElementById('bar-text').textContent = 'Placing neurons inside brain...';
+
+    // Use setTimeout so the loading bar renders before heavy raycasting starts
+    setTimeout(() => {
+      spawnNeurons(worldBox);
+
+      // ── 6. Fit camera ──────────────────────────────────────────────────────
+      const dist = worldSize.length() * 1.15;
+      camera.position.set(worldCenter.x, worldCenter.y, worldCenter.z + dist);
+      controls.target.copy(worldCenter);
+      controls.update();
+
+      document.getElementById('bar').style.width = '100%';
+      document.getElementById('bar-text').textContent = 'Neural network ready.';
+      setTimeout(() => document.getElementById('loading').classList.add('gone'), 600);
+
+      setEmotion('neutral');
+    }, 50);
+  },
+  xhr => {
+    if (xhr.lengthComputable) {
+      const p = Math.round(xhr.loaded / xhr.total * 65);
+      document.getElementById('bar').style.width   = p + '%';
+      document.getElementById('bar-text').textContent = 'Loading brain... ' + p + '%';
+    }
+  },
+  err => {
+    document.getElementById('bar-text').textContent = 'ERROR: brain.glb not found — place it in same folder as this HTML';
+    console.error(err);
+  }
+);
+
+// ─── RESIZE ──────────────────────────────────────────────────────────────────
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ─── RENDER LOOP ─────────────────────────────────────────────────────────────
+function animate(ts) {
+  requestAnimationFrame(animate);
+  controls.update();
+  if (neurons.length > 0) { updateNeurons(ts); updateSignals(); }
+  renderer.render(scene, camera);
+}
+animate(0);
+
+// ─── CAMERA SNAP VIEWS ───────────────────────────────────────────────────────
+let brainCenter = new THREE.Vector3(0,0,0);
+let brainRadius = 5;
+let snapAnimId  = null;
+
+const VIEWS = {
+  front:  ()=> new THREE.Vector3(brainCenter.x,                brainCenter.y,                brainCenter.z + brainRadius),
+  back:   ()=> new THREE.Vector3(brainCenter.x,                brainCenter.y,                brainCenter.z - brainRadius),
+  left:   ()=> new THREE.Vector3(brainCenter.x - brainRadius,  brainCenter.y,                brainCenter.z),
+  right:  ()=> new THREE.Vector3(brainCenter.x + brainRadius,  brainCenter.y,                brainCenter.z),
+  top:    ()=> new THREE.Vector3(brainCenter.x,                brainCenter.y + brainRadius,  brainCenter.z),
+  bottom: ()=> new THREE.Vector3(brainCenter.x,                brainCenter.y - brainRadius,  brainCenter.z),
+};
+
+let activeView = null;
+
+function snapView(name) {
+  if (!VIEWS[name]) return;
+  controls.autoRotate = false;
+  clearTimeout(rt);
+
+  // Mark button active
+  document.querySelectorAll('.vb[data-v]').forEach(b => b.classList.remove('vb-on'));
+  const btn = document.querySelector(`.vb[data-v="${name}"]`);
+  if (btn) btn.classList.add('vb-on');
+  activeView = name;
+
+  const targetPos = VIEWS[name]();
+  const startPos  = camera.position.clone();
+  const startTgt  = controls.target.clone();
+  const endTgt    = brainCenter.clone();
+  let t = 0;
+
+  if (snapAnimId) cancelAnimationFrame(snapAnimId);
+
+  function animSnap() {
+    t = Math.min(t + 0.035, 1);
+    const ease = 1 - Math.pow(1 - t, 3); // cubic ease-out
+
+    camera.position.lerpVectors(startPos, targetPos, ease);
+    controls.target.lerpVectors(startTgt, endTgt, ease);
+    controls.update();
+
+    if (t < 1) { snapAnimId = requestAnimationFrame(animSnap); }
+    else        { snapAnimId = null; }
+  }
+  animSnap();
+}
+
+function zoomStep(dir) {
+  // dir: -1 = zoom in, +1 = zoom out
+  const step = brainRadius * 0.18;
+  const current = camera.position.distanceTo(controls.target);
+  const newDist  = Math.max(controls.minDistance, Math.min(controls.maxDistance, current + dir * step));
+  const direction = camera.position.clone().sub(controls.target).normalize();
+  camera.position.copy(controls.target).addScaledVector(direction, newDist);
+  controls.update();
+}
+
+function toggleAutoRotate() {
+  controls.autoRotate = !controls.autoRotate;
+  const btn = document.getElementById('vb-rot');
+  if (btn) {
+    btn.classList.toggle('vb-on', controls.autoRotate);
+    btn.textContent = controls.autoRotate ? '⟳ ON' : '⟳ OFF';
+  }
+  // clear any active snap highlight
+  if (controls.autoRotate) {
+    document.querySelectorAll('.vb[data-v]').forEach(b => b.classList.remove('vb-on'));
+    activeView = null;
+  }
+}
+
+window.luminaBrain = { setEmotion, snapView, zoomStep, toggleAutoRotate };
+
+window.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'HIDE_UI') {
+    document.getElementById('topbar').style.display = 'none';
+    document.getElementById('stats').style.display = 'none';
+    document.getElementById('panel').style.display = 'none';
+    document.getElementById('info').style.display = 'none';
+    document.getElementById('bottom').style.display = 'none';
+    document.getElementById('view-controls').style.display = 'none';
+  } else if (e.data && e.data.type === 'SHOW_UI') {
+    document.getElementById('topbar').style.display = 'flex';
+    document.getElementById('stats').style.display = 'flex';
+    document.getElementById('panel').style.display = 'flex';
+    document.getElementById('info').style.display = 'flex';
+    document.getElementById('bottom').style.display = 'flex';
+    document.getElementById('view-controls').style.display = 'flex';
+  } else if (e.data && e.data.type === 'SNAP_VIEW') {
+    snapView(e.data.view);
+  } else if (e.data && e.data.type === 'SET_EMOTION') {
+    // Glow the 3D brain in the correct emotion color from the chat backend
+    const em = (e.data.emotion || 'neutral').toLowerCase();
+    if (EMOTIONS[em]) setEmotion(em);
+  }
+});
+</script>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="Brainmaptoggle.js"></script>
+</body>
+</html>
