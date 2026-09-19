@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import MemoryNode from "../models/MemoryNode.js";
 import mongoose from "mongoose";
+import { upsertMemoryVector } from "./vectorService.js";
 
 const isMongoReady = () => mongoose.connection.readyState === 1;
 
@@ -69,6 +70,12 @@ export const updateOrAddMemoryNode = async (userId, label, emotion, confidence, 
   }
 
   await node.save();
+
+  // Upsert to Pinecone
+  if (node._id) {
+    await upsertMemoryVector(userId, node._id, label, type);
+  }
+
   return node;
 };
 

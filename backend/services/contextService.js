@@ -2,9 +2,11 @@ import JournalEntry from "../models/JournalEntry.js";
 import MemoryNode from "../models/MemoryNode.js";
 import mongoose from "mongoose";
 
+import { querySemanticMemory } from "./vectorService.js";
+
 const isMongoReady = () => mongoose.connection.readyState === 1;
 
-export const buildUserContext = async (userId) => {
+export const buildUserContext = async (userId, currentMessage) => {
   if (!userId) return "";
   if (!isMongoReady()) return "";
 
@@ -17,6 +19,7 @@ export const buildUserContext = async (userId) => {
 
   let contextParts = [];
 
+  // MongoDB context (structured)
   const emotionCounts = {};
   recentEntries.forEach(entry => {
     if (entry.detectedEmotion && entry.detectedEmotion !== "neutral") {
@@ -25,7 +28,7 @@ export const buildUserContext = async (userId) => {
   });
   const emotionStrings = Object.entries(emotionCounts).map(([e, count]) => `${e}(${count}x)`);
   if (emotionStrings.length > 0) {
-    contextParts.push(`User's recent emotions: ${emotionStrings.join(", ")}`);
+    contextParts.push(`STRUCTURED PATTERNS:\n- User's recent emotions: ${emotionStrings.join(", ")}`);
   }
 
   const recentTriggers = new Set();
@@ -35,14 +38,46 @@ export const buildUserContext = async (userId) => {
     }
   });
   if (recentTriggers.size > 0) {
-    contextParts.push(`Active triggers: ${Array.from(recentTriggers).join(", ")}`);
+    contextParts.push(`- Active triggers: ${Array.from(recentTriggers).join(", ")}`);
   }
 
   const importantNodes = memoryNodes
     .filter(n => n.type === "person" || n.type === "life_area" || n.type === "trauma")
     .map(n => n.label);
   if (importantNodes.length > 0) {
-    contextParts.push(`Important factors in their life: ${importantNodes.slice(0, 10).join(", ")}`);
+    contextParts.push(`- Important factors in their life: ${importantNodes.slice(0, 10).join(", ")}`);
+  }
+
+  // Pinecone context (semantic)
+  if (currentMessage) {
+    const semanticMemories = await querySemanticMemory(userId, currentMessage, 3);
+    
+    // Temporary development logging
+    console.log(`\n🌲 [Pinecone Dev Log] Retrieved ${semanticMemories?.length || 0} semantic memories`);
+    if (semanticMemories && semanticMemories.length > 0) {
+      semanticMemories.forEach((match, idx) => {
+        console.log(`   └─ Match ${idx + 1}: Score = ${match.score?.toFixed(4)}, ID = ${match.id}, Type = ${match.metadata?.type}`);
+      });
+    }
+
+    if (semanticMemories && semanticMemories.length > 0) {
+      contextParts.push(`\nRELEVANT PAST EXPERIENCES:`);
+      semanticMemories.forEach((match, index) => {
+        const metadata = match.metadata || {};
+        const text = metadata.text || metadata.label || "A past memory.";
+        const date = metadata.timestamp ? new Date(metadata.timestamp).toLocaleDateString() : "Previously";
+        
+        if (metadata.type === 'journal') {
+          contextParts.push(`${index + 1}. [${date}] User said: "${text}" (Emotion: ${metadata.emotion})`);
+        } else if (metadata.type === 'onboarding') {
+          contextParts.push(`${index + 1}. [Onboarding] User background: "${text}"`);
+        } else if (metadata.type === 'memory_node') {
+          contextParts.push(`${index + 1}. [Memory Node] Concept: "${text}"`);
+        } else {
+          contextParts.push(`${index + 1}. ${text}`);
+        }
+      });
+    }
   }
 
   return contextParts.join("\n");

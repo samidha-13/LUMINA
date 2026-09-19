@@ -11,6 +11,7 @@ import {
   buildUserContext,
   detectPattern
 } from "../services/contextService.js";
+import { upsertJournalVector } from "../services/vectorService.js";
 
 export const processChatMessage = async (req, res) => {
   try {
@@ -75,6 +76,9 @@ export const processChatMessage = async (req, res) => {
         return res.status(500).json({ error: "Failed to save journal entry" });
       }
       console.log("✅ Journal entry saved:", entry._id);
+
+      // Upsert to Pinecone
+      await upsertJournalVector(userId, entry._id, message, emotion);
     } else {
       console.warn("⚠️ Mongo unavailable: skipping journal/memory persistence.");
     }
@@ -110,8 +114,8 @@ export const processChatMessage = async (req, res) => {
     const patternInsight = await detectPattern(userId, triggersArray, emotion);
     console.log("🔍 Pattern insight:", patternInsight);
 
-    // Step 7: Build user context from MongoDB history
-    const userContextStr = await buildUserContext(userId);
+    // Step 7: Build user context from MongoDB history + Pinecone semantic memory
+    const userContextStr = await buildUserContext(userId, message);
 
     // Step 8: Generate Groq response using personality prompt if provided
     // Only friend + listener personalities get Hinglish

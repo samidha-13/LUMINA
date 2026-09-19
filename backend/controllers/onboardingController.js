@@ -1,4 +1,5 @@
 import MemoryNode from "../models/MemoryNode.js";
+import { upsertOnboardingVector } from "../services/vectorService.js";
 
 // Save onboarding answers per-user using their real userId
 export const saveOnboarding = async (req, res) => {
@@ -17,6 +18,9 @@ export const saveOnboarding = async (req, res) => {
       },
       { upsert: true, new: true }
     );
+
+    // Upsert to Pinecone
+    await upsertOnboardingVector(userId, answers);
 
     console.log(`✅ Onboarding saved for userId: ${userId}, answers: ${answers?.length}`);
     res.json({ success: true });
